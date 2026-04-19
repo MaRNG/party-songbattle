@@ -38,7 +38,8 @@
     "contributte/guzzlette": "^3.4",
     "nettrine/orm": "^0.10.1",
     "nettrine/dbal": "^0.10.3",
-    "nettrine/cache": "^0.5.0"
+    "nettrine/cache": "^0.5.0",
+    "nettrine/migrations": "^0.10.1"
   },
   "require-dev": {
     "contributte/qa": "^0.4",
