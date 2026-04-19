@@ -21,4 +21,4 @@ nettrine.dbal:
 
 nettrine.orm.attributes:
     mapping:
-        App\Model\Database\Entity: %appDir%/Model/Database/Entity
+        App\Infrastrucutre\Database\Entity: %appDir%/Infrastructure/Database/Entity
