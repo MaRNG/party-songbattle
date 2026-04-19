@@ -34,7 +34,11 @@
     "symfony/serializer": "^7.2.3",
     "symfony/validator": "^7.2.3",
     "symfony/property-info": "^7.2.3",
-    "symfony/cache": "^7.2.3"
+    "symfony/cache": "^7.2.3",
+    "contributte/guzzlette": "^3.4",
+    "nettrine/orm": "^0.10.1",
+    "nettrine/dbal": "^0.10.3",
+    "nettrine/cache": "^0.5.0"
   },
   "require-dev": {
     "contributte/qa": "^0.4",

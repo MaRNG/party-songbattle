@@ -14,6 +14,7 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/dev" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/di" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/forms" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/guzzlette" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/http" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/latte" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/mail" />
@@ -31,8 +32,19 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/contributte/utils" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/dealerdirect/phpcodesniffer-composer-installer" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/annotations" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/cache" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/collections" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/dbal" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/deprecations" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/event-manager" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/inflector" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/instantiator" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/lexer" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/orm" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/doctrine/persistence" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/fakerphp/faker" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/guzzlehttp/guzzle" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/guzzlehttp/promises" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/guzzlehttp/psr7" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/hamcrest/hamcrest-php" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/koriym/attributes" />
@@ -60,6 +72,9 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/nette/security" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/nette/tester" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/nette/utils" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/nettrine/cache" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/nettrine/dbal" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/nettrine/orm" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/paragonie/random_compat" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/phpstan/phpdoc-parser" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/phpstan/phpstan" />
@@ -69,6 +84,7 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/phpstan/phpstan-strict-rules" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/cache" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/container" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/psr/http-client" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/http-factory" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/http-message" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/psr/log" />

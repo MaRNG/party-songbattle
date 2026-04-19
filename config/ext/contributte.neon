@@ -1,6 +1,7 @@
 # Extension > Contributte
 #
 extensions:
+	guzzle: Contributte\Guzzlette\DI\GuzzleExtension
 	console: Contributte\Console\DI\ConsoleExtension(%consoleMode%)
 	monolog: Contributte\Monolog\DI\MonologExtension
 
@@ -21,3 +22,8 @@ monolog:
 				- Monolog\Processor\IntrospectionProcessor()
 				- Monolog\Processor\MemoryPeakUsageProcessor()
 				- Monolog\Processor\ProcessIdProcessor()
+
+guzzle:
+	debug: %debugMode%
+	client:
+		timeout: 30

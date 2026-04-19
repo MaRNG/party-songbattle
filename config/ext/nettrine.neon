@@ -1,0 +1,24 @@
+extensions:
+    # Nettrine
+    # Nettrine - dbal
+    nettrine.dbal: Nettrine\DBAL\DI\DbalExtension
+    nettrine.dbal.console: Nettrine\DBAL\DI\DbalConsoleExtension(%consoleMode%)
+
+    nettrine.orm: Nettrine\ORM\DI\OrmExtension
+    nettrine.orm.console: Nettrine\ORM\DI\OrmConsoleExtension(%consoleMode%)
+    nettrine.orm.cache: Nettrine\ORM\DI\OrmCacheExtension
+    nettrine.orm.attributes: Nettrine\ORM\DI\OrmAttributesExtension
+
+
+nettrine.orm:
+  configuration:
+    autoGenerateProxyClasses: true
+
+nettrine.dbal:
+  debug:
+    panel: %debugMode%
+    sourcePaths: [%appDir%]
+
+nettrine.orm.attributes:
+    mapping:
+        App\Model\Database\Entity: %appDir%/Model/Database/Entity

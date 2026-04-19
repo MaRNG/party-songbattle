@@ -7,6 +7,7 @@ includes:
 	# Extensions
 	- ext/apitte.neon
 	- ext/contributte.neon
+	- ext/nettrine.neon
 
 php:
 	date.timezone: Europe/Prague
