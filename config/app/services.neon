@@ -1,9 +1,16 @@
 services:
-	# Routing ================
-	- App\Model\Router\RouterFactory
-	router:
-		type: Nette\Application\IRouter
-		factory: @App\Model\Router\RouterFactory::create
+    # Commands
+    - App\Commands\Spotify\SpotifyConnectWizardCommand(
+        %spotify.app.clientId%,
+        %spotify.app.clientSecret%,
+        %spotify.app.redirectUri%
+    )
+
+    # Routing ================
+    - App\Model\Router\RouterFactory
+    router:
+        type: Nette\Application\IRouter
+        factory: @App\Model\Router\RouterFactory::create
 search:
 #    -
 #        in: %appDir%/Api/Controller

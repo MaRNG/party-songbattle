@@ -1,2 +1,9 @@
 parameters:
-
+    spotify:
+        app:
+            clientId: ''
+            clientSecret: ''
+            redirectUri: ''
+        auth:
+            accessToken: ''
+            refreshToken: ''
