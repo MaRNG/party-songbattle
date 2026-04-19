@@ -1,0 +1,12 @@
+{
+  "name": "astro-forecast-ui",
+  "version": "1.0.0",
+  "description": "UI styles for Astro Forecast",
+  "scripts": {
+    "build:css": "sass www/assets/scss/main.scss www/assets/css/main.css",
+    "watch:css": "sass --watch www/assets/scss/main.scss www/assets/css/main.css"
+  },
+  "devDependencies": {
+    "sass": "^1.83.4"
+  }
+}

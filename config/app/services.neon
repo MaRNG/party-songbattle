@@ -1,0 +1,19 @@
+services:
+	# Routing ================
+	- App\Model\Router\RouterFactory
+	router:
+		type: Nette\Application\IRouter
+		factory: @App\Model\Router\RouterFactory::create
+search:
+#    -
+#        in: %appDir%/Api/Controller
+#        classes:
+#            - *Controller
+#    -
+#        in: %appDir%/Api/Facade
+#        classes:
+#            - *Facade
+#    -
+#        in: %appDir%/Command
+#        classes:
+#            - *Command
