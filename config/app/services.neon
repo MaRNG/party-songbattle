@@ -1,10 +1,18 @@
 services:
+    # External clients
+    - App\Infrastructure\ExternalClient\SpotifyExternalClient(%spotify.auth.accessToken%)
+
+    # Imports
+    - App\Infrastructure\Import\Playlist\SpotifyPlaylistImport
+
     # Commands
     - App\Commands\Spotify\SpotifyConnectWizardCommand(
         %spotify.app.clientId%,
         %spotify.app.clientSecret%,
         %spotify.app.redirectUri%
     )
+
+    - App\Commands\Import\SpotifyPlaylistImportCommand
 
     # Routing ================
     - App\Model\Router\RouterFactory
