@@ -2,7 +2,7 @@
 
 namespace App\Infrastructure\ExternalClient\Dto;
 
-final readonly class SpotifyTrackDto
+final readonly class SpotifyAlbumDto
 {
     /**
      * @param array<int, SpotifyArtistDto> $artists
@@ -12,9 +12,7 @@ final readonly class SpotifyTrackDto
         public string              $name,
         public ?\DateTimeInterface $releaseDate,
         public ?int                $releaseYear,
-        public int                 $durationMsS,
-        public array               $artists,
-        public SpotifyAlbumDto     $album,
+        public array               $artists
     )
     {
     }

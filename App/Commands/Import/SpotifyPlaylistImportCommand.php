@@ -3,6 +3,7 @@
 namespace App\Commands\Import;
 
 use App\Infrastructure\Import\Playlist\SpotifyPlaylistImport;
+use App\Util\SpotifySourceUrlExtractor;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -23,6 +24,13 @@ final class SpotifyPlaylistImportCommand extends Command
     {
         $playlistId = $input->getArgument('playlistId');
 
+        $playlistIdFromUrl = SpotifySourceUrlExtractor::extractPlaylistId($playlistId);
+
+        if ($playlistIdFromUrl !== null)
+        {
+            $playlistId = $playlistIdFromUrl;
+        }
+
         $output->writeln(sprintf('Importing Playlist: %s', $playlistId));
 
         $this->spotifyPlaylistImport->importPlaylistTracks($playlistId);
@@ -34,6 +42,6 @@ final class SpotifyPlaylistImportCommand extends Command
 
     protected function configure()
     {
-        $this->addArgument('playlistId', InputArgument::REQUIRED, 'Playlist Spotify ID');
+        $this->addArgument('playlistId', InputArgument::REQUIRED, 'Playlist Spotify ID or Spotify URL');
     }
 }

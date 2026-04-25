@@ -2,7 +2,7 @@
 
 namespace App\Infrastructure\ExternalClient\Dto;
 
-final readonly class SpotifyPlaylistDto
+final readonly class SpotifyArtistDto
 {
     public function __construct(
         public string $spotifyId,

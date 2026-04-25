@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Database\Entity\Track;
 
+use App\Infrastructure\Database\Entity\Album\Album;
 use App\Infrastructure\Database\Entity\Artist\Artist;
 use App\Infrastructure\Database\Entity\BaseEntity;
 use App\Infrastructure\Database\Entity\Genre\Genre;
@@ -49,6 +50,10 @@ class Track extends BaseEntity
     #[JoinTable(name: "tracks_artists")]
     protected Collection $artists;
 
+    #[ManyToMany(targetEntity: Album::class, inversedBy: "tracks")]
+    #[JoinTable(name: "tracks_albums")]
+    protected Collection $albums;
+
     #[ManyToMany(targetEntity: Genre::class, inversedBy: "tracks")]
     #[JoinTable(name: "tracks_genres")]
     protected Collection $genres;
@@ -60,6 +65,7 @@ class Track extends BaseEntity
         $this->playlists = new ArrayCollection();
         $this->artists = new ArrayCollection();
         $this->genres = new ArrayCollection();
+        $this->albums = new ArrayCollection();
     }
 
     public function getExternalId(): string|null

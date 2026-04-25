@@ -2,7 +2,7 @@
 
 namespace App\Infrastructure\Database\Entity\Genre;
 
-use App\Infrastructure\Database\Entity\Artist\Artist;
+use App\Infrastructure\Database\Entity\Artist\Album;
 use App\Infrastructure\Database\Entity\BaseEntity;
 use App\Infrastructure\Database\Entity\Track\Track;
 use App\Model\Enum\ExternalSourceEnum;

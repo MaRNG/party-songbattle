@@ -2,6 +2,9 @@
 
 namespace App\Infrastructure\Import\Playlist;
 
+use App\Infrastructure\Database\Entity\Album\Album;
+use App\Infrastructure\Database\Entity\Artist\Artist;
+use App\Infrastructure\ExternalClient\Dto\SpotifyArtistDto;
 use App\Infrastructure\ExternalClient\SpotifyExternalClient;
 
 final readonly class SpotifyPlaylistImport
@@ -16,7 +19,20 @@ final readonly class SpotifyPlaylistImport
     {
         $playlistDto = $this->spotifyExternalClient->playlists()->listTracks($playlistId);
 
-        var_dump($playlistDto);
-        die();
+        foreach ($playlistDto->items as $spotifyTrackDto)
+        {
+            var_dump($spotifyTrackDto);
+            die();
+        }
+    }
+
+    private function getOrCreateArtist(SpotifyArtistDto $spotifyArtistDto): Artist
+    {
+
+    }
+
+    private function getOrCreateAlbum(SpotifyArtistDto $spotifyArtistDto): Album
+    {
+
     }
 }
