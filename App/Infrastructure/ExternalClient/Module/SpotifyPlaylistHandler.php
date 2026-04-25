@@ -52,18 +52,18 @@ final class SpotifyPlaylistHandler extends BaseSpotifyHandler
                      $playlistTrack = $playlistTrackRow['item'];
 
                      return new SpotifyTrackDto(
-                         spotifyId: $playlistTrack['id'],
-                         name: $playlistTrack['name'],
+                         spotifyId  : $playlistTrack['id'],
+                         name       : $playlistTrack['name'],
                          releaseDate: \DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date']) ?: null,
                          releaseYear: \DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date']) ? (int)\DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date'])->format('Y') : (int)$playlistTrack['album']['release_date'],
-                         durationMsS: $playlistTrack['duration_ms'],
-                         artists: array_map(function (array $artist) {
+                         durationMs : $playlistTrack['duration_ms'],
+                         artists    : array_map(function (array $artist) {
                             return new SpotifyArtistDto(
                                 spotifyId: $artist['id'],
                                 name: $artist['name'],
                             );
                          }, $playlistTrack['artists']),
-                         album: new SpotifyAlbumDto(
+                         album      : new SpotifyAlbumDto(
                              spotifyId: $playlistTrack['album']['id'],
                              name: $playlistTrack['album']['name'],
                              releaseDate: \DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date']) ?: null,

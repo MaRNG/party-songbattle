@@ -20,7 +20,7 @@ class Album extends BaseEntity
     protected ?string $external_id = null;
 
     #[Column(nullable: true, enumType: ExternalSourceEnum::class)]
-    protected ?string $external_source = null;
+    protected ?ExternalSourceEnum $external_source = null;
 
     #[Column(nullable: false)]
     protected string $name;
@@ -54,12 +54,12 @@ class Album extends BaseEntity
         return $this;
     }
 
-    public function getExternalSource(): string|null
+    public function getExternalSource(): ExternalSourceEnum|null
     {
         return $this->external_source;
     }
 
-    public function setExternalSource(?string $external_source): Album
+    public function setExternalSource(?ExternalSourceEnum $external_source): Album
     {
         $this->external_source = $external_source;
         return $this;

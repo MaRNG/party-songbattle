@@ -12,7 +12,7 @@ final readonly class SpotifyTrackDto
         public string              $name,
         public ?\DateTimeInterface $releaseDate,
         public ?int                $releaseYear,
-        public int                 $durationMsS,
+        public int                 $durationMs,
         public array               $artists,
         public SpotifyAlbumDto     $album,
     )

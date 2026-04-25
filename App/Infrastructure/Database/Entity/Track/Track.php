@@ -21,8 +21,8 @@ class Track extends BaseEntity
     #[Column(unique: true, nullable: true)]
     protected ?string $external_id = null;
 
-    #[Column(nullable: true, enumType: ExternalSourceEnum::class)]
-    protected ?string $external_source = null;
+    #[Column(type: "string", nullable: true, enumType: ExternalSourceEnum::class)]
+    protected ?ExternalSourceEnum $external_source = null;
 
     #[Column(type: "smallint", nullable: true)]
     protected ?int $external_popularity_score = null;
@@ -68,6 +68,14 @@ class Track extends BaseEntity
         $this->albums = new ArrayCollection();
     }
 
+    /**
+     * @return Collection<int,Album>
+     */
+    public function getAlbums(): Collection
+    {
+        return $this->albums;
+    }
+
     public function getExternalId(): string|null
     {
         return $this->external_id;
@@ -79,12 +87,12 @@ class Track extends BaseEntity
         return $this;
     }
 
-    public function getExternalSource(): string|null
+    public function getExternalSource(): ExternalSourceEnum|null
     {
         return $this->external_source;
     }
 
-    public function setExternalSource(?string $external_source): Track
+    public function setExternalSource(?ExternalSourceEnum $external_source): Track
     {
         $this->external_source = $external_source;
         return $this;

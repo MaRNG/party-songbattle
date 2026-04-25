@@ -1,4 +1,9 @@
 services:
+    # Repositories
+    - App\Infrastructure\Database\Repository\AlbumRepository
+    - App\Infrastructure\Database\Repository\ArtistRepository
+    - App\Infrastructure\Database\Repository\TrackRepository
+
     # External clients
     - App\Infrastructure\ExternalClient\SpotifyExternalClient(%spotify.auth.accessToken%)
 
