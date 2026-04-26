@@ -34,6 +34,9 @@ class GameTrack extends BaseEntity
     #[Column(type: 'string', nullable: false)]
     protected string $normalized_complete_name;
 
+    #[Column(type: 'boolean', nullable: false)]
+    protected bool $played = false;
+
     public function getOriginTrack(): Track|null
     {
         return $this->origin_track;
@@ -86,6 +89,17 @@ class GameTrack extends BaseEntity
     public function setNormalizedCompleteName(string $normalized_complete_name): GameTrack
     {
         $this->normalized_complete_name = $normalized_complete_name;
+        return $this;
+    }
+
+    public function isPlayed(): bool
+    {
+        return $this->played;
+    }
+
+    public function setPlayed(bool $played): GameTrack
+    {
+        $this->played = $played;
         return $this;
     }
 }
