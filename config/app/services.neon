@@ -1,4 +1,7 @@
 services:
+    # Forms
+    - App\UI\Forms\GameFormFactory
+
     # Repositories
     - App\Infrastructure\Database\Repository\AlbumRepository
     - App\Infrastructure\Database\Repository\ArtistRepository

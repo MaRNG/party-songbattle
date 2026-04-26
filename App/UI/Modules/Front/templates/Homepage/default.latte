@@ -1,3 +1,36 @@
 {block content}
-    <h1>Hello world!</h1>
+    <h1>Party songbattle</h1>
+
+    <div>
+        <h2>Vytvořit novou hru</h2>
+        {form newGameForm}
+            <div class="filter-input-pair">
+                {input year_filter}
+            </div>
+
+            <div class="filter-input-pair">
+                {input artist_filter}
+            </div>
+
+            {input create}
+        {/form}
+    </div>
+
+    <script>
+        document.querySelectorAll('input[value="__all__"]').forEach((element) => {
+            element.addEventListener('click', (e) => {
+                if (element.checked) {
+                    document.querySelectorAll('[name=\'' + element.name + '\']').forEach(secondElement => {
+                        secondElement.checked = true;
+                    });
+                }
+                else
+                {
+                    document.querySelectorAll('[name=\'' + element.name + '\']').forEach(secondElement => {
+                        secondElement.checked = false;
+                    });
+                }
+            });
+        })
+    </script>
 {/block}

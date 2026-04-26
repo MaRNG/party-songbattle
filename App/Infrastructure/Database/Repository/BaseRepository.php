@@ -17,4 +17,21 @@ abstract class BaseRepository extends EntityRepository
     }
 
     abstract protected static function getEntityClass(): string;
+
+    public function getSelectFormData(string $columnName = 'name'): array
+    {
+        $qb = $this
+            ->createQueryBuilder('u')
+            ->select(sprintf('u.id, u.%s', $columnName))
+            ->orderBy(sprintf('u.%s', $columnName), 'ASC');
+
+        $data = [];
+
+        foreach ($qb->getQuery()->getArrayResult() as $row)
+        {
+            $data[$row['id']] = $row[$columnName];
+        }
+
+        return $data;
+    }
 }
