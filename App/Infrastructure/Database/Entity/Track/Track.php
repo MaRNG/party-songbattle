@@ -7,15 +7,18 @@ use App\Infrastructure\Database\Entity\Artist\Artist;
 use App\Infrastructure\Database\Entity\BaseEntity;
 use App\Infrastructure\Database\Entity\Genre\Genre;
 use App\Infrastructure\Database\Entity\Playlist\Playlist;
+use App\Infrastructure\Database\Entity\Tag\Tag;
 use App\Model\Enum\ExternalSourceEnum;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\Column;
 use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\Index;
 use Doctrine\ORM\Mapping\JoinTable;
 use Doctrine\ORM\Mapping\ManyToMany;
 
 #[Entity]
+#[Index(name: 'music_brainz_imported_idx', columns: ['music_brainz_imported'])]
 class Track extends BaseEntity
 {
     #[Column(unique: true, nullable: true)]
@@ -57,6 +60,13 @@ class Track extends BaseEntity
     #[ManyToMany(targetEntity: Genre::class, inversedBy: "tracks")]
     #[JoinTable(name: "tracks_genres")]
     protected Collection $genres;
+
+    #[ManyToMany(targetEntity: Tag::class, inversedBy: "tracks")]
+    #[JoinTable(name: "tracks_tags")]
+    protected Collection $tags;
+
+    #[Column(nullable: false)]
+    protected bool $music_brainz_imported = false;
 
     public function __construct()
     {
@@ -177,5 +187,21 @@ class Track extends BaseEntity
     public function getGenres(): Collection
     {
         return $this->genres;
+    }
+
+    public function getTags(): Collection
+    {
+        return $this->tags;
+    }
+
+    public function isMusicBrainzImported(): bool
+    {
+        return $this->music_brainz_imported;
+    }
+
+    public function setMusicBrainzImported(bool $music_brainz_imported): Track
+    {
+        $this->music_brainz_imported = $music_brainz_imported;
+        return $this;
     }
 }

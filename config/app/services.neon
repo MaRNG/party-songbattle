@@ -9,9 +9,12 @@ services:
 
     # External clients
     - App\Infrastructure\ExternalClient\SpotifyExternalClient(%spotify.auth.accessToken%)
+    - App\Infrastructure\ExternalClient\MusicBrainzExternalClient
 
     # Imports
     - App\Infrastructure\Import\Playlist\SpotifyPlaylistImport
+    - App\Infrastructure\Import\Track\MusicBrainzTrackTagsImport
+    - App\Infrastructure\Import\Artist\MusicBrainzArtistCountryImport
 
     # Commands
     - App\Commands\Spotify\SpotifyConnectWizardCommand(
@@ -21,6 +24,8 @@ services:
     )
 
     - App\Commands\Import\SpotifyPlaylistImportCommand
+    - App\Commands\Import\MusicBrainzArtistCountryImportCommand
+    - App\Commands\Import\MusicBrainzTrackTagsImportCommand
 
     # Routing ================
     - App\Model\Router\RouterFactory

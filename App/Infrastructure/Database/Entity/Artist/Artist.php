@@ -9,9 +9,12 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\Column;
 use Doctrine\ORM\Mapping\Entity;
+use Doctrine\ORM\Mapping\Index;
 use Doctrine\ORM\Mapping\ManyToMany;
 
 #[Entity]
+#[Index(name: 'country_idx', columns: ['country'])]
+#[Index(name: 'music_brainz_imported_idx', columns: ['music_brainz_imported'])]
 class Artist extends BaseEntity
 {
     #[Column(unique: true, nullable: true)]
@@ -20,11 +23,17 @@ class Artist extends BaseEntity
     #[Column(nullable: true, enumType: ExternalSourceEnum::class)]
     protected ?ExternalSourceEnum $external_source = null;
 
-    #[Column(nullable: false)]
+    #[Column(type: 'string', nullable: false)]
     protected string $name;
+
+    #[Column(type: 'string', length: 5, nullable: false)]
+    protected string $country;
 
     #[ManyToMany(targetEntity: Track::class, mappedBy: "artists")]
     protected Collection $tracks;
+
+    #[Column(nullable: false)]
+    protected bool $music_brainz_imported = false;
 
     public function __construct()
     {
@@ -63,6 +72,17 @@ class Artist extends BaseEntity
     public function setName(string $name): self
     {
         $this->name = $name;
+        return $this;
+    }
+
+    public function isMusicBrainzImported(): bool
+    {
+        return $this->music_brainz_imported;
+    }
+
+    public function setMusicBrainzImported(bool $music_brainz_imported): Artist
+    {
+        $this->music_brainz_imported = $music_brainz_imported;
         return $this;
     }
 }
