@@ -2,83 +2,73 @@
 
 namespace App\Infrastructure\ExternalClient\Module;
 
+use App\Infrastructure\ExternalClient\Dto\MusicBrainzTrackDto;
 use App\Infrastructure\ExternalClient\Dto\SpotifyAlbumDto;
 use App\Infrastructure\ExternalClient\Dto\SpotifyArtistDto;
 use App\Infrastructure\ExternalClient\Dto\SpotifyPlaylistTracksDto;
 use App\Infrastructure\ExternalClient\Dto\SpotifyTrackDto;
+use GuzzleHttp\RequestOptions;
 use Nette\Utils\Json;
 
 final class MusicBrainzTrackHandler extends BaseMusicBrainzHandler
 {
-    public function listTracks(string $playlistId, int $limit = 10, int $offset = 0): SpotifyPlaylistTracksDto
+    public function findTrack(string $trackName, array $artistNames): ?MusicBrainzTrackDto
     {
-        $response = $this->client->get('/v1/playlists/' . $playlistId . '/items', [
-            'query' => [
-                'limit' => $limit,
-                'offset' => $offset,
-                'market' => 'CZ'
+        $response = $this->client->get('/ws/2/recording/', [
+            RequestOptions::QUERY => [
+                'query' => sprintf('recording:%s AND artist:%s', $trackName, implode(', ', $artistNames)),
+                'fmt' => 'json',
+                'inc' => 'tags+artists'
             ]
         ]);
 
-        $parsedPlaylistTracks = Json::decode($response->getBody()->getContents(), forceArrays: true);
-        $spotifyPlaylistTracks = self::mapListTracksResponse($parsedPlaylistTracks);
+        $jsonResponse = Json::decode($response->getBody()->getContents(), forceArrays: true);
 
-        $items = $spotifyPlaylistTracks->items;
-
-        while ($spotifyPlaylistTracks->next)
+        if ($jsonResponse['recordings'] === [])
         {
-            $response = $this->client->get($spotifyPlaylistTracks->next);
-
-            $parsedPlaylistTracks = Json::decode($response->getBody()->getContents(), forceArrays: true);
-            $spotifyPlaylistTracks = self::mapListTracksResponse($parsedPlaylistTracks);
-
-            foreach ($spotifyPlaylistTracks->items as $item)
-            {
-                $items[] = $item;
-            }
+            return null;
         }
 
-        return new SpotifyPlaylistTracksDto(
-            items: $items,
-            total: count($items),
-            next: null
-        );
-    }
+        $finalTrackId = null;
+        $finalTrackName = null;
+        $finalTrackTags = [];
 
-    private static function mapListTracksResponse(array $parsedPlaylistTracks): SpotifyPlaylistTracksDto
-    {
-        return new SpotifyPlaylistTracksDto(
-            items: array_map(function (array $playlistTrackRow) {
-                     $playlistTrack = $playlistTrackRow['item'];
+        foreach ($jsonResponse['recordings'] as $recording)
+        {
+            if (
+                $finalTrackId === null &&
+                $finalTrackName === null &&
+                $recording['title'] === $trackName &&
+                (($recording['artist-credit'][0]['name'] ?? null) === ($artistNames[0] ?? null))
+            )
+            {
+                $finalTrackId = $recording['id'];
+                $finalTrackName = $recording['title'];
+            }
 
-                     return new SpotifyTrackDto(
-                         spotifyId  : $playlistTrack['id'],
-                         name       : $playlistTrack['name'],
-                         releaseDate: \DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date']) ?: null,
-                         releaseYear: \DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date']) ? (int)\DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date'])->format('Y') : (int)$playlistTrack['album']['release_date'],
-                         durationMs : $playlistTrack['duration_ms'],
-                         artists    : array_map(function (array $artist) {
-                            return new SpotifyArtistDto(
-                                spotifyId: $artist['id'],
-                                name: $artist['name'],
-                            );
-                         }, $playlistTrack['artists']),
-                         album      : new SpotifyAlbumDto(
-                             spotifyId: $playlistTrack['album']['id'],
-                             name: $playlistTrack['album']['name'],
-                             releaseDate: \DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date']) ?: null,
-                             releaseYear: \DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date']) ? (int)\DateTime::createFromFormat('Y-m-d', $playlistTrack['album']['release_date'])->format('Y') : (int)$playlistTrack['album']['release_date'],
-                             artists: array_map(function (array $artist) {
-                                return new SpotifyArtistDto(
-                                    spotifyId: $artist['id'],
-                                    name: $artist['name'],
-                                );
-                            }, $playlistTrack['artists']),
-                        ),
-                     );
-                 }, $parsedPlaylistTracks['items']),
-            total: (int)$parsedPlaylistTracks['total'],
-            next : $parsedPlaylistTracks['next'],
+            if (
+                $recording['title'] === $trackName &&
+                (($recording['artist-credit'][0]['name'] ?? null) === ($artistNames[0] ?? null))
+            )
+            {
+                foreach ($recording['tags'] as $tag)
+                {
+                    $finalTrackTags[] = $tag['name'];
+                }
+            }
+
+        }
+
+        if ($finalTrackId === null)
+        {
+            return null;
+        }
+
+        return new MusicBrainzTrackDto(
+            $finalTrackId,
+            $finalTrackName,
+            $artistNames,
+            array_unique($finalTrackTags)
         );
     }
 }

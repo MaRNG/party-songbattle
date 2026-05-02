@@ -16,12 +16,12 @@ use Doctrine\ORM\Mapping\ManyToMany;
 class Tag extends BaseEntity
 {
     #[Column(nullable: true, enumType: ExternalSourceEnum::class)]
-    protected ?string $external_source = null;
+    protected ?ExternalSourceEnum $external_source = null;
 
-    #[Column(nullable: false)]
+    #[Column(nullable: false, unique: true)]
     protected string $name;
 
-    #[ManyToMany(targetEntity: Track::class, mappedBy: "genres")]
+    #[ManyToMany(targetEntity: Track::class, mappedBy: "tags")]
     protected Collection $tracks;
 
     public function __construct()
@@ -31,12 +31,12 @@ class Tag extends BaseEntity
         $this->tracks = new ArrayCollection();
     }
 
-    public function getExternalSource(): string|null
+    public function getExternalSource(): ExternalSourceEnum|null
     {
         return $this->external_source;
     }
 
-    public function setExternalSource(?string $external_source): Tag
+    public function setExternalSource(?ExternalSourceEnum $external_source): Tag
     {
         $this->external_source = $external_source;
         return $this;

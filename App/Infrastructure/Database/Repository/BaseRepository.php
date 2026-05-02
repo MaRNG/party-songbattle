@@ -5,6 +5,7 @@ namespace App\Infrastructure\Database\Repository;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\QueryBuilder;
 
 abstract class BaseRepository extends EntityRepository
 {
@@ -33,5 +34,10 @@ abstract class BaseRepository extends EntityRepository
         }
 
         return $data;
+    }
+
+    public function getBaseQuery(): QueryBuilder
+    {
+        return $this->createQueryBuilder('u');
     }
 }
