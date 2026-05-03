@@ -25,6 +25,7 @@ final class RouterFactory
         $this->router[] = $list = new RouteList('Front');
 
         // Specific route
+        $list->addRoute('/hledat', 'Search:default');
         $list->addRoute('/statistiky', 'Statistics:default');
 
         // Default route

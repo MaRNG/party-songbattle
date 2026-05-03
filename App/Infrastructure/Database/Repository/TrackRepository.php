@@ -26,4 +26,23 @@ final class TrackRepository extends BaseRepository
 
         return $data;
     }
+
+    /**
+     * @return Track[]
+     */
+    public function searchTracks(string $query, int $limit = 10): array
+    {
+        $qb = $this->getBaseQuery();
+        
+        $qb->select('u')
+           ->leftJoin('u.artists', 'a')
+           ->addSelect('a');
+
+        $qb->where('u.name LIKE :query OR a.name LIKE :query')
+           ->setParameter('query', '%' . $query . '%');
+
+        $qb->setMaxResults($limit);
+
+        return $qb->getQuery()->getResult();
+    }
 }

@@ -1,0 +1,109 @@
+{block content}
+<div style="margin: 20px;">
+    <h2>Vyhledávání písniček</h2>
+
+    <div style="position: relative; width: 400px;">
+        <input type="text" id="searchInput" placeholder="Zadejte název písničky nebo interpreta..." 
+               style="width: 100%; padding: 10px; font-size: 16px; box-sizing: border-box;" autocomplete="off">
+               
+        <div id="searchResults" style="display: none; position: absolute; width: 100%; max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ccc; z-index: 100;">
+            <!-- Results will be injected here -->
+        </div>
+    </div>
+
+    <div id="trackDetails" style="margin-top: 30px; padding: 20px; border: 1px solid #ddd; width: 400px; display: none; background-color: #f9f9f9;">
+        <h3 id="detailName" style="margin-top: 0;"></h3>
+        <p><strong>Interpreti:</strong> <span id="detailArtists"></span></p>
+        <p><strong>Rok vydání:</strong> <span id="detailYear"></span></p>
+        <p><strong>Délka:</strong> <span id="detailDuration"></span></p>
+        <p><strong>Zdroj:</strong> <span id="detailSource"></span></p>
+        <p><strong>Žánry:</strong> <span id="detailGenres"></span></p>
+        <p><strong>Tagy:</strong> <span id="detailTags"></span></p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+    const trackDetails = document.getElementById('trackDetails');
+    
+    let debounceTimer;
+
+    searchInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(debounceTimer);
+        
+        if (query.length < 2) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetch({link search!} + '&query=' + encodeURIComponent(query))
+                .then(response => response.json())
+                .then(data => {
+                    searchResults.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        searchResults.innerHTML = '<div style="padding: 10px; color: #888;">Žádné výsledky...</div>';
+                        searchResults.style.display = 'block';
+                        return;
+                    }
+                    
+                    data.forEach(item => {
+                        const div = document.createElement('div');
+                        div.textContent = item.text;
+                        div.style.padding = '10px';
+                        div.style.cursor = 'pointer';
+                        div.style.borderBottom = '1px solid #eee';
+                        
+                        div.addEventListener('mouseover', () => div.style.backgroundColor = '#f0f0f0');
+                        div.addEventListener('mouseout', () => div.style.backgroundColor = 'transparent');
+                        
+                        div.addEventListener('click', () => {
+                            showDetails(item.details);
+                            searchResults.style.display = 'none';
+                            searchInput.value = item.text;
+                        });
+                        
+                        searchResults.appendChild(div);
+                    });
+                    
+                    searchResults.style.display = 'block';
+                })
+                .catch(error => console.error('Chyba při stahování výsledků:', error));
+        }, 300);
+    });
+    
+    // Skrýt výsledky při kliknutí jinam
+    document.addEventListener('click', function(e) {
+        if (e.target !== searchInput && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    function showDetails(details) {
+        document.getElementById('detailName').textContent = details.name;
+        document.getElementById('detailArtists').textContent = details.artists;
+        document.getElementById('detailYear').textContent = details.release_year || 'Neznámý';
+        
+        let durationText = '-';
+        if (details.duration_ms) {
+            const durationSeconds = Math.floor(details.duration_ms / 1000);
+            const minutes = Math.floor(durationSeconds / 60);
+            const seconds = (durationSeconds % 60).toString().padStart(2, '0');
+            durationText = minutes + ':' + seconds;
+        }
+        document.getElementById('detailDuration').textContent = durationText;
+        
+        document.getElementById('detailSource').textContent = details.external_source || '-';
+        document.getElementById('detailGenres').textContent = details.genres || 'Žádné';
+        document.getElementById('detailTags').textContent = details.tags || 'Žádné';
+        
+        trackDetails.style.display = 'block';
+    }
+});
+</script>
+{/block}
