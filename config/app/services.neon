@@ -1,4 +1,8 @@
 services:
+    # Genres
+    - App\Model\Genre\GenreAssigner
+    - App\Model\Genre\GenreConsolidator
+
     # Forms
     - App\UI\Forms\GameFormFactory
 
@@ -26,6 +30,7 @@ services:
     - App\Commands\Import\SpotifyPlaylistImportCommand
     - App\Commands\Import\MusicBrainzArtistCountryImportCommand
     - App\Commands\Import\MusicBrainzTrackTagsImportCommand
+    - App\Commands\Import\ConsolidateTrackGenresCommand
 
     # Routing ================
     - App\Model\Router\RouterFactory

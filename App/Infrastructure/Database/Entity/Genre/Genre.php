@@ -21,7 +21,7 @@ class Genre extends BaseEntity
     #[Column(nullable: true, enumType: ExternalSourceEnum::class)]
     protected ?string $external_source = null;
 
-    #[Column(nullable: false)]
+    #[Column(nullable: false, unique: true)]
     protected string $name;
 
     #[ManyToMany(targetEntity: Track::class, mappedBy: "genres")]

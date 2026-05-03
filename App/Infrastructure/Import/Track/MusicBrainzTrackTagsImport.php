@@ -14,7 +14,8 @@ final readonly class MusicBrainzTrackTagsImport
     public function __construct(
         private MusicBrainzExternalClient $musicBrainzExternalClient,
         private TrackRepository           $trackRepository,
-        private EntityManagerInterface    $entityManager
+        private EntityManagerInterface    $entityManager,
+        private \App\Model\Genre\GenreAssigner $genreAssigner
     )
     {
     }
@@ -127,6 +128,8 @@ final readonly class MusicBrainzTrackTagsImport
                     $dbTrack->getTags()->add($tag);
                 }
             }
+
+            $this->genreAssigner->assignGenresToTrack($dbTrack, $trackDto->tags);
 
             $dbTrack->setMusicBrainzImported(true);
             $this->entityManager->flush();
