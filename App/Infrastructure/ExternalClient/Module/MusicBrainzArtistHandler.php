@@ -27,7 +27,10 @@ final class MusicBrainzArtistHandler extends BaseMusicBrainzHandler
 
         foreach ($jsonResponse['artists'] as $artist)
         {
-            if (mb_strtolower($artist['name']) === mb_strtolower($artistName))
+            $musicBrainzArtistName = mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $artist['name']));
+            $databaseArtistName = mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $artistName));
+
+            if ($musicBrainzArtistName === $databaseArtistName)
             {
                 return new MusicBrainzArtistDto(
                     $artist['id'],
