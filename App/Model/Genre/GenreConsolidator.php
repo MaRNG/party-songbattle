@@ -27,6 +27,9 @@ final class GenreConsolidator
         'indie',
         'punk',
         'alternative',
+        'ballad',
+        'grunge',
+        'funk',
     ];
 
     /**
