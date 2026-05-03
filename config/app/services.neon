@@ -1,4 +1,7 @@
 services:
+    # Statistics
+    - App\Model\Statistics\StatisticsProvider
+
     # Genres
     - App\Model\Genre\GenreAssigner
     - App\Model\Genre\GenreConsolidator
@@ -10,6 +13,8 @@ services:
     - App\Infrastructure\Database\Repository\AlbumRepository
     - App\Infrastructure\Database\Repository\ArtistRepository
     - App\Infrastructure\Database\Repository\TrackRepository
+    - App\Infrastructure\Database\Repository\TagRepository
+    - App\Infrastructure\Database\Repository\GenreRepository
 
     # External clients
     - App\Infrastructure\ExternalClient\SpotifyExternalClient(%spotify.auth.accessToken%)

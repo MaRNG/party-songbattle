@@ -23,6 +23,11 @@ final class RouterFactory
     protected function buildFront(): void
     {
         $this->router[] = $list = new RouteList('Front');
+
+        // Specific route
+        $list->addRoute('/statistiky', 'Statistics:default');
+
+        // Default route
         $list->addRoute('<presenter>/<action>[/<id>]', 'Homepage:default');
     }
 }

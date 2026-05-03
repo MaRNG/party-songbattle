@@ -1,0 +1,67 @@
+{varType App\Model\Statistics\Dto\StatisticsDto $statistics}
+
+{block content}
+    <div>
+        <h2>Počet písniček: {$statistics->trackCounts}</h2>
+    </div>
+
+    <div class="statistics-wrapper">
+        <h2>Počet písniček dle dekád</h2>
+        <table class="table">
+            {foreach $statistics->trackCountByDecades as $decade => $trackCount}
+                <tr>
+                    <th>{$decade}</th>
+                    <td>{$trackCount}</td>
+                </tr>
+            {/foreach}
+        </table>
+    </div>
+
+    <div class="statistics-wrapper">
+        <h2>Počet písniček dle interpreta</h2>
+        <table class="table">
+            {foreach $statistics->trackCountByArtists as $artist => $trackCount}
+                <tr>
+                    <th>{$artist}</th>
+                    <td>{$trackCount}</td>
+                </tr>
+            {/foreach}
+        </table>
+    </div>
+
+    <div class="statistics-wrapper">
+        <h2>Počet písniček dle žánru</h2>
+        <table class="table">
+            {foreach $statistics->trackCountByGenres as $genre => $trackCount}
+                <tr>
+                    <th>{$genre}</th>
+                    <td>{$trackCount}</td>
+                </tr>
+            {/foreach}
+        </table>
+    </div>
+
+    <div class="statistics-wrapper">
+        <h2>Počet písniček dle oblasti</h2>
+        <table class="table">
+            {foreach $statistics->trackCountByAreas as $area => $trackCount}
+                <tr>
+                    <th>{$area}</th>
+                    <td>{$trackCount}</td>
+                </tr>
+            {/foreach}
+        </table>
+    </div>
+
+    <div class="statistics-wrapper">
+        <h2>Počet písniček dle tagů</h2>
+        <table class="table">
+            {foreach $statistics->trackCountByTags as $tag => $trackCount}
+                <tr>
+                    <th>{$tag}</th>
+                    <td>{$trackCount}</td>
+                </tr>
+            {/foreach}
+        </table>
+    </div>
+{/block}
