@@ -14,13 +14,17 @@ final class MusicBrainzTrackHandler extends BaseMusicBrainzHandler
 {
     public function findTrack(string $trackName, array $artistNames): ?MusicBrainzTrackDto
     {
-        $response = $this->client->get('/ws/2/recording/', [
-            RequestOptions::QUERY => [
-                'query' => sprintf('recording:%s AND artist:%s', $trackName, implode(', ', $artistNames)),
-                'fmt' => 'json',
-                'inc' => 'tags+artists'
-            ]
-        ]);
+        try {
+            $response = $this->client->get('/ws/2/recording/', [
+                RequestOptions::QUERY => [
+                    'query' => sprintf('recording:%s AND artist:%s', $trackName, implode(', ', $artistNames)),
+                    'fmt' => 'json',
+                    'inc' => 'tags+artists'
+                ]
+            ]);
+        } catch (\Exception $ex) {
+            return null;
+        }
 
         $jsonResponse = Json::decode($response->getBody()->getContents(), forceArrays: true);
 
@@ -38,8 +42,8 @@ final class MusicBrainzTrackHandler extends BaseMusicBrainzHandler
             if (
                 $finalTrackId === null &&
                 $finalTrackName === null &&
-                $recording['title'] === $trackName &&
-                (($recording['artist-credit'][0]['name'] ?? null) === ($artistNames[0] ?? null))
+                mb_strtolower($recording['title']) === strtolower($trackName) &&
+                (mb_strtolower(($recording['artist-credit'][0]['name'] ?? '')) === mb_strtolower(($artistNames[0] ?? '')))
             )
             {
                 $finalTrackId = $recording['id'];
@@ -47,8 +51,8 @@ final class MusicBrainzTrackHandler extends BaseMusicBrainzHandler
             }
 
             if (
-                $recording['title'] === $trackName &&
-                (($recording['artist-credit'][0]['name'] ?? null) === ($artistNames[0] ?? null))
+                mb_strtolower($recording['title']) === mb_strtolower($trackName) &&
+                (mb_strtolower(($recording['artist-credit'][0]['name'] ?? '')) === mb_strtolower(($artistNames[0] ?? '')))
             )
             {
                 foreach ($recording['tags'] as $tag)

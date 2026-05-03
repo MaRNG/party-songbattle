@@ -14,6 +14,7 @@ use Doctrine\ORM\Mapping\ManyToMany;
 
 #[Entity]
 #[Index(name: 'country_idx', columns: ['country'])]
+#[Index(name: 'area_idx', columns: ['area'])]
 #[Index(name: 'music_brainz_imported_idx', columns: ['music_brainz_imported'])]
 class Artist extends BaseEntity
 {
@@ -28,6 +29,9 @@ class Artist extends BaseEntity
 
     #[Column(type: 'string', length: 5, nullable: false)]
     protected string $country;
+
+    #[Column(type: 'string', length: 100, nullable: false)]
+    protected string $area;
 
     #[ManyToMany(targetEntity: Track::class, mappedBy: "artists")]
     protected Collection $tracks;
@@ -83,6 +87,28 @@ class Artist extends BaseEntity
     public function setMusicBrainzImported(bool $music_brainz_imported): Artist
     {
         $this->music_brainz_imported = $music_brainz_imported;
+        return $this;
+    }
+
+    public function getCountry(): string
+    {
+        return $this->country;
+    }
+
+    public function setCountry(string $country): Artist
+    {
+        $this->country = $country;
+        return $this;
+    }
+
+    public function getArea(): string
+    {
+        return $this->area;
+    }
+
+    public function setArea(string $area): Artist
+    {
+        $this->area = $area;
         return $this;
     }
 }
