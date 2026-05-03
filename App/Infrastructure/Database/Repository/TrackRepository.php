@@ -27,6 +27,22 @@ final class TrackRepository extends BaseRepository
         return $data;
     }
 
+    public function getAreaFilterData(): array
+    {
+        $fetchedData = $this->getEntityManager()->getConnection()->fetchAllAssociative(
+            'SELECT area FROM artist WHERE area != \'\' AND area != \'-\' GROUP BY area ORDER BY area ASC'
+        );
+
+        $data = [];
+
+        foreach ($fetchedData as $row)
+        {
+            $data[$row['area']] = $row['area'];
+        }
+
+        return $data;
+    }
+
     /**
      * @return Track[]
      */
