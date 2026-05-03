@@ -7,6 +7,7 @@ use App\Infrastructure\ExternalClient\Dto\SpotifyAlbumDto;
 use App\Infrastructure\ExternalClient\Dto\SpotifyArtistDto;
 use App\Infrastructure\ExternalClient\Dto\SpotifyPlaylistTracksDto;
 use App\Infrastructure\ExternalClient\Dto\SpotifyTrackDto;
+use App\Util\TrackNameNormalizer;
 use GuzzleHttp\RequestOptions;
 use Nette\Utils\Json;
 
@@ -39,11 +40,21 @@ final class MusicBrainzTrackHandler extends BaseMusicBrainzHandler
 
         foreach ($jsonResponse['recordings'] as $recording)
         {
+            $musicBrainzRecordingCleanedName = TrackNameNormalizer::normalizeName($recording['title']);
+            $databaseRecordingCleanedName = TrackNameNormalizer::normalizeName($trackName);
+
+            $musicBrainzArtistCleanedName = mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', ($recording['artist-credit'][0]['name'] ?? '')));
+
+            $databaseArtistCleanedNames = array_map(static function(string $artistName)
+            {
+                return mb_strtolower(iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $artistName));
+            }, $artistNames);
+
             if (
                 $finalTrackId === null &&
                 $finalTrackName === null &&
-                mb_strtolower($recording['title']) === strtolower($trackName) &&
-                (mb_strtolower(($recording['artist-credit'][0]['name'] ?? '')) === mb_strtolower(($artistNames[0] ?? '')))
+                $musicBrainzRecordingCleanedName === $databaseRecordingCleanedName &&
+                in_array($musicBrainzArtistCleanedName, $databaseArtistCleanedNames, true)
             )
             {
                 $finalTrackId = $recording['id'];
@@ -51,8 +62,8 @@ final class MusicBrainzTrackHandler extends BaseMusicBrainzHandler
             }
 
             if (
-                mb_strtolower($recording['title']) === mb_strtolower($trackName) &&
-                (mb_strtolower(($recording['artist-credit'][0]['name'] ?? '')) === mb_strtolower(($artistNames[0] ?? '')))
+                $musicBrainzRecordingCleanedName === $databaseRecordingCleanedName &&
+                in_array($musicBrainzArtistCleanedName, $databaseArtistCleanedNames, true)
             )
             {
                 foreach ($recording['tags'] as $tag)

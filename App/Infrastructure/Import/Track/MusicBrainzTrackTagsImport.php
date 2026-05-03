@@ -64,6 +64,8 @@ final readonly class MusicBrainzTrackTagsImport
 
             $i = 1;
 
+            array_shift($transformedTracks);
+
             foreach ($transformedTracks as $transformedTrack)
             {
                 CliWriter::writeNl(sprintf('Importing track ID %s...', $transformedTrack['id']));
