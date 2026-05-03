@@ -15,12 +15,14 @@ php:
 
 # Nette section
 di:
-	debugger: false
+	debugger: %debugMode%
 
 tracy:
 	logSeverity: E_ALL
 	strictMode: yes
+	showBar: %debugMode%
 
 application:
+    catchExceptions: %productionMode%
     mapping:
         Front: [App\UI\Modules\Front, *, *\*Presenter]

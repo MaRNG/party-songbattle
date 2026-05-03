@@ -5,6 +5,7 @@ namespace App;
 use Contributte\Bootstrap\ExtraConfigurator;
 use Nette\Application\Application as NetteApplication;
 use Symfony\Component\Console\Application as SymfonyApplication;
+use Tracy\Debugger;
 
 class Bootstrap
 {
@@ -12,6 +13,12 @@ class Bootstrap
 	public static function boot(): ExtraConfigurator
 	{
 		$configurator = new ExtraConfigurator();
+
+        if ($_SERVER['HTTP_HOST'] && str_contains($_SERVER['HTTP_HOST'], '.localhost'))
+        {
+            $configurator->setDebugMode(true);
+        }
+
 		$configurator->setTempDirectory(__DIR__ . '/../var/temp');
 
 		// Disable default extensions
@@ -30,10 +37,6 @@ class Bootstrap
 		$configurator->addConfig(__DIR__ . '/../config/config.neon');
 		$configurator->addConfig(__DIR__ . '/../config/local.neon');
 
-        if ($_SERVER['HTTP_HOST'] && str_contains($_SERVER['HTTP_HOST'], '.localhost'))
-        {
-            $configurator->setDebugMode(true);
-        }
 
 		return $configurator;
 	}
