@@ -30,6 +30,7 @@ final class RouterFactory
 
         $list->addRoute('/hra/singleplayer/<gameHash>', 'Game:singleplayer');
         $list->addRoute('/hra/tracks-pool/<gameHash>', 'Game:tracksPool');
+        $list->addRoute('/hra/menu/<gameHash>', 'Game:menu');
 
         // Default route
         $list->addRoute('<presenter>/<action>[/<id>]', 'Homepage:default');

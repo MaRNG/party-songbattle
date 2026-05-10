@@ -1,0 +1,13 @@
+{varType App\Infrastructure\Database\Entity\Game\Game $game}
+
+{block content}
+    <div>
+        <h1>Hra {$game->getCode()}</h1>
+    </div>
+
+    <div>
+        <a href="{plink Game:singleplayer, gameHash => $game->getHash()}">Hrát singleplayer</a>
+        <br>
+        <a href="{plink Game:tracksPool, gameHash => $game->getHash()}">Přehled písniček v této hře</a>
+    </div>
+{/block}

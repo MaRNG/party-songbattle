@@ -31,4 +31,14 @@ final class GamePresenter extends BaseFrontPresenter
             throw new BadRequestException('Game not found!', IResponse::S404_NotFound);
         }
     }
+
+    public function renderMenu(string $gameHash): void
+    {
+        $this->template->game = $game = $this->gameRepository->findByHash($gameHash);
+
+        if ($game === null)
+        {
+            throw new BadRequestException('Game not found!', IResponse::S404_NotFound);
+        }
+    }
 }

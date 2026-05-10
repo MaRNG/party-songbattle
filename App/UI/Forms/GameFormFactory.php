@@ -37,7 +37,7 @@ final readonly class GameFormFactory
 
             $createdGame = $this->gameTracksFactory->create($gameFilterList);
 
-            $form->getPresenterIfExists()->redirect('Game:singleplayer', ['gameHash' => $createdGame->getHash()]);
+            $form->getPresenterIfExists()->redirect('Game:menu', ['gameHash' => $createdGame->getHash()]);
         };
 
         return $form;
