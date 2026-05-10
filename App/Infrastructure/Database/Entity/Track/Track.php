@@ -184,6 +184,9 @@ class Track extends BaseEntity
         return $this->artists;
     }
 
+    /**
+     * @return Collection<int,Genre>
+     */
     public function getGenres(): Collection
     {
         return $this->genres;

@@ -10,4 +10,14 @@ final class GameRepository extends BaseRepository
     {
         return Game::class;
     }
+
+    public function findByHash(string $gameHash): ?Game
+    {
+        return $this->findOneBy(['hash' => $gameHash]);
+    }
+
+    public function findByInviteCode(string $inviteCode): ?Game
+    {
+        return $this->findOneBy(['code' => $inviteCode]);
+    }
 }

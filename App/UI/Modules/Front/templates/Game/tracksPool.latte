@@ -1,0 +1,30 @@
+{varType App\Infrastructure\Database\Entity\Game\Game $game}
+
+{block content}
+    <h1>Přehled poolu tracků ve hře {$game->getCode()}</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Píšnička</th>
+                <th>Interpret/i</th>
+                <th>Žánr/y</th>
+                <th>Přehráno</th>
+            </tr>
+        </thead>
+        <tbody>
+        {foreach $game->getTracks() as $gameTrack}
+            <tr>
+                <td>{$gameTrack->getTrackName()}</td>
+                <td>{$gameTrack->getArtistName()}</td>
+                <td>
+                    {foreach $gameTrack->getOriginTrack()->getGenres() as $genre}
+                        {$genre->getName()}{if $iterator->isLast() === false}, {/if}
+                    {/foreach}
+                </td>
+                <td>{$gameTrack->isPlayed() ? 'Ano' : 'Ne'}</td>
+            </tr>
+        {/foreach}
+        </tbody>
+    </table>
+{/block}

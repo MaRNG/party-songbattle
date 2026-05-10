@@ -27,7 +27,9 @@ final class RouterFactory
         // Specific route
         $list->addRoute('/hledat', 'Search:default');
         $list->addRoute('/statistiky', 'Statistics:default');
+
         $list->addRoute('/hra/singleplayer/<gameHash>', 'Game:singleplayer');
+        $list->addRoute('/hra/tracks-pool/<gameHash>', 'Game:tracksPool');
 
         // Default route
         $list->addRoute('<presenter>/<action>[/<id>]', 'Homepage:default');
