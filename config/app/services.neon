@@ -1,4 +1,7 @@
 services:
+    # Game
+    - App\Model\Game\GameFactory
+
     # Statistics
     - App\Model\Statistics\StatisticsProvider
 
@@ -15,6 +18,7 @@ services:
     - App\Infrastructure\Database\Repository\TrackRepository
     - App\Infrastructure\Database\Repository\TagRepository
     - App\Infrastructure\Database\Repository\GenreRepository
+    - App\Infrastructure\Database\Repository\GameRepository
 
     # External clients
     - App\Infrastructure\ExternalClient\SpotifyExternalClient(%spotify.auth.accessToken%)

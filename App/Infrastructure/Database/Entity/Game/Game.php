@@ -16,8 +16,12 @@ use Doctrine\ORM\Mapping\OneToMany;
 #[Entity]
 class Game extends BaseEntity
 {
-    #[Column(type: 'string', nullable: false)]
-    protected array $code;
+    // Invite code
+    #[Column(type: 'string', nullable: false, unique: true, length: 4)]
+    protected string $code;
+
+    #[Column(type: 'string', nullable: false, unique: true, length: 32)]
+    protected string $hash;
 
     #[Column(type: 'json', nullable: false)]
     protected array $filters;
@@ -32,12 +36,12 @@ class Game extends BaseEntity
         $this->tracks = new ArrayCollection();
     }
 
-    public function getCode(): array
+    public function getCode(): string
     {
         return $this->code;
     }
 
-    public function setCode(array $code): Game
+    public function setCode(string $code): Game
     {
         $this->code = $code;
         return $this;
@@ -60,5 +64,16 @@ class Game extends BaseEntity
     public function getTracks(): Collection
     {
         return $this->tracks;
+    }
+
+    public function getHash(): string
+    {
+        return $this->hash;
+    }
+
+    public function setHash(string $hash): Game
+    {
+        $this->hash = $hash;
+        return $this;
     }
 }
