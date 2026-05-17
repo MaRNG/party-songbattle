@@ -68,6 +68,9 @@ class Track extends BaseEntity
     #[Column(nullable: false)]
     protected bool $music_brainz_imported = false;
 
+    #[Column(nullable: false)]
+    protected ?string $track_name_artist_name_hash = null;
+
     public function __construct()
     {
         parent::__construct();
@@ -205,6 +208,17 @@ class Track extends BaseEntity
     public function setMusicBrainzImported(bool $music_brainz_imported): Track
     {
         $this->music_brainz_imported = $music_brainz_imported;
+        return $this;
+    }
+
+    public function getTrackNameArtistNameHash(): string|null
+    {
+        return $this->track_name_artist_name_hash;
+    }
+
+    public function setTrackNameArtistNameHash(?string $track_name_artist_name_hash): Track
+    {
+        $this->track_name_artist_name_hash = $track_name_artist_name_hash;
         return $this;
     }
 }
