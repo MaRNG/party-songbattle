@@ -24,6 +24,14 @@ final readonly class GameFactory
     {
     }
 
+    public function countMatchingTracks(GameFilterListDto $gameFilterList): int
+    {
+        return (int)$this->createFilteredQueryBuilder($gameFilterList)
+            ->select('COUNT(DISTINCT u.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     public function create(GameFilterListDto $gameFilterList): Game
     {
         $this->entityManager->beginTransaction();

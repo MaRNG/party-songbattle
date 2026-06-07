@@ -2,3 +2,5 @@ config/local.neon
 vendor
 vendor/*
 .puzzle.history.json
+node_modules
+www/assets/build

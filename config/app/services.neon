@@ -1,6 +1,9 @@
 services:
     # Game
     - App\Model\Game\GameFactory
+    - App\Model\Game\GameFilterOptionsProvider
+    - App\Model\Game\GameSessionManager
+    - App\Model\Game\GameStateProvider
 
     # Statistics
     - App\Model\Statistics\StatisticsProvider
@@ -19,6 +22,15 @@ services:
     - App\Infrastructure\Database\Repository\TagRepository
     - App\Infrastructure\Database\Repository\GenreRepository
     - App\Infrastructure\Database\Repository\GameRepository
+    - App\Infrastructure\Database\Repository\GameTrackRepository
+    - App\Infrastructure\Database\Repository\GamePlayerRepository
+    - App\Infrastructure\Database\Repository\GameGuessRepository
+
+    # Api / Facades
+    - App\Api\Facade\Game\GameFacade
+
+    # Api / Controllers
+    - App\Api\Controller\V1\Public\Game\GameController
 
     # External clients
     - App\Infrastructure\ExternalClient\SpotifyExternalClient(%spotify.auth.accessToken%)

@@ -1,44 +1,6 @@
 {block content}
-    <h1>Party songbattle</h1>
+    <div id="app"></div>
 
-    <div>
-        <h2>Vytvořit novou hru</h2>
-        {form newGameForm}
-            <div class="filter-input-pair">
-                {input year_filter}
-            </div>
-
-            <div class="filter-input-pair">
-                {input genre_filter}
-            </div>
-
-            <div class="filter-input-pair">
-                {input area_filter}
-            </div>
-
-            <div class="filter-input-pair">
-                {input artist_filter}
-            </div>
-
-            {input create}
-        {/form}
-    </div>
-
-    <script>
-        document.querySelectorAll('input[value="__all__"]').forEach((element) => {
-            element.addEventListener('click', (e) => {
-                if (element.checked) {
-                    document.querySelectorAll('[name=\'' + element.name + '\']').forEach(secondElement => {
-                        secondElement.checked = true;
-                    });
-                }
-                else
-                {
-                    document.querySelectorAll('[name=\'' + element.name + '\']').forEach(secondElement => {
-                        secondElement.checked = false;
-                    });
-                }
-            });
-        })
-    </script>
+    <link rel="stylesheet" href="{$basePath}/assets/build/main.css">
+    <script src="{$basePath}/assets/build/main.js" defer></script>
 {/block}
