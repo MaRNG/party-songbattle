@@ -60,6 +60,8 @@ final readonly class GameFacade
         $game = $this->getGameByHash($hash);
         $player = $this->getPlayerByToken($game, $token);
 
+        $this->gameSessionManager->autoPauseIfExpired($game);
+
         return $this->gameStateProvider->get($game, $player);
     }
 

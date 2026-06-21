@@ -83,14 +83,34 @@ function copyCode(): void {
     }
 }
 
-function start(): void {
-    props.session.startGame().then(() => {
-        const state = props.session.state.value;
+async function start(): Promise<void> {
+    void spotify.activateElement();
 
-        if (state?.spotifyTrackId && spotify.isReady.value)
-        {
-            spotify.playFromStart(state.spotifyTrackId, state.isPlaying);
-        }
-    }).catch(() => undefined);
+    try
+    {
+        await props.session.startGame();
+    }
+    catch
+    {
+        return;
+    }
+
+    const state = props.session.state.value;
+
+    if (!state?.spotifyTrackId)
+    {
+        return;
+    }
+
+    const ready = await spotify.ensureReady();
+
+    if (!ready)
+    {
+        spotify.error.value = 'Spotify player not ready (isReady=false) — game started but nothing was sent to Spotify';
+
+        return;
+    }
+
+    spotify.playFromStart(state.spotifyTrackId, state.isPlaying);
 }
 </script>

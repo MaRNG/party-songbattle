@@ -31,6 +31,9 @@ const isPlaying = ref(false);
 
 let player: Spotify.Player | null = null;
 let sdkLoadPromise: Promise<void> | null = null;
+let loadedTrackId: string | null = null;
+let positionBaselineMs = 0;
+let positionBaselineAt = Date.now();
 
 function loadStoredAuth(): StoredAuth | null {
     try
@@ -174,25 +177,32 @@ async function loadSdkAndCreatePlayer(): Promise<void> {
     });
 
     player.addListener('ready', ({ device_id }) => {
+        console.info('[spotify] ready', device_id);
         deviceId.value = device_id;
         isReady.value = true;
     });
 
-    player.addListener('not_ready', () => {
+    player.addListener('not_ready', ({ device_id }) => {
+        console.warn('[spotify] not_ready', device_id);
         isReady.value = false;
+        loadedTrackId = null;
     });
 
     player.addListener('player_state_changed', (state) => {
+        console.log('[spotify] player_state_changed', state);
+
         if (state)
         {
             isPlaying.value = !state.paused;
+            positionBaselineMs = state.position;
+            positionBaselineAt = Date.now();
         }
     });
 
-    player.addListener('initialization_error', ({ message }) => { error.value = message; });
-    player.addListener('authentication_error', ({ message }) => { error.value = message; clearAuth(); });
-    player.addListener('account_error', ({ message }) => { error.value = `Spotify Premium required: ${message}`; });
-    player.addListener('playback_error', ({ message }) => { error.value = message; });
+    player.addListener('initialization_error', ({ message }) => { console.error('[spotify] initialization_error', message); error.value = message; });
+    player.addListener('authentication_error', ({ message }) => { console.error('[spotify] authentication_error', message); error.value = message; clearAuth(); });
+    player.addListener('account_error', ({ message }) => { console.error('[spotify] account_error', message); error.value = `Spotify Premium required: ${message}`; });
+    player.addListener('playback_error', ({ message }) => { console.error('[spotify] playback_error', message); error.value = message; });
 
     await player.connect();
 }
@@ -292,6 +302,8 @@ async function spotifyFetch(path: string, init: RequestInit = {}): Promise<Respo
         throw new Error('Not connected to Spotify');
     }
 
+    console.log('[spotify] request', init.method ?? 'GET', path, init.body ?? '');
+
     const response = await fetch(`${SPOTIFY_API_BASE}${path}`, {
         ...init,
         headers: {
@@ -303,45 +315,182 @@ async function spotifyFetch(path: string, init: RequestInit = {}): Promise<Respo
 
     if (!response.ok && response.status !== 204)
     {
+        const body = await response.clone().text().catch(() => '');
+        console.error('[spotify] request failed', response.status, path, body);
         error.value = `Spotify playback command failed (${response.status})`;
     }
 
     return response;
 }
 
-async function pause(): Promise<void> {
-    if (deviceId.value === null)
+async function activateElement(): Promise<void> {
+    if (player === null)
     {
         return;
     }
 
     try
     {
-        await spotifyFetch(`/me/player/pause?device_id=${deviceId.value}`, { method: 'PUT' });
+        await player.activateElement();
     }
-    catch
+    catch (err)
     {
-        // error already recorded by spotifyFetch
+        console.warn('[spotify] activateElement failed', err);
+    }
+}
+
+async function waitForTrackToLoad(spotifyTrackId: string, timeoutMs = 4000): Promise<boolean> {
+    if (player === null)
+    {
+        return false;
+    }
+
+    const expectedUri = `spotify:track:${spotifyTrackId}`;
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline)
+    {
+        const current = await player.getCurrentState();
+
+        if (current?.track_window.current_track.uri === expectedUri)
+        {
+            return true;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    return false;
+}
+
+async function waitForPaused(timeoutMs = 2000): Promise<void> {
+    if (player === null)
+    {
+        return;
+    }
+
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline)
+    {
+        const current = await player.getCurrentState();
+
+        if (current === null || current.paused)
+        {
+            return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+}
+
+async function ensureReady(timeoutMs = 5000): Promise<boolean> {
+    if (isReady.value)
+    {
+        return true;
+    }
+
+    // Spotify demotes an idle Connect device to `not_ready` after a while without
+    // active playback (e.g. the master sat on a paused/loaded track for several
+    // minutes). Reconnecting and giving it a moment recovers without the user
+    // having to log in again — `connect()` is safe to call on an already-connected
+    // player too.
+    if (player !== null)
+    {
+        try
+        {
+            await player.connect();
+        }
+        catch (err)
+        {
+            console.warn('[spotify] reconnect attempt failed', err);
+        }
+    }
+
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline)
+    {
+        if (isReady.value)
+        {
+            return true;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
+    return isReady.value;
+}
+
+function getEstimatedPositionMs(): number {
+    if (!isPlaying.value)
+    {
+        return positionBaselineMs;
+    }
+
+    return positionBaselineMs + (Date.now() - positionBaselineAt);
+}
+
+async function pause(): Promise<void> {
+    if (player === null)
+    {
+        return;
+    }
+
+    try
+    {
+        // The SDK's own instance method controls this exact in-browser playback
+        // session directly. The equivalent `/me/player/pause` Web API call is meant
+        // for controlling ANY Connect device remotely and routes through Spotify's
+        // cloud even when the target is this same tab — that round trip (commonly
+        // 200ms-1s) is what was causing the snippet watchdog to overshoot the step
+        // limit and pause-then-seek to land on a non-zero position.
+        await player.pause();
+    }
+    catch (err)
+    {
+        console.error('[spotify] local pause failed', err);
+        error.value = 'Spotify pause failed';
     }
 }
 
 async function resume(): Promise<void> {
-    if (deviceId.value === null)
+    if (player === null)
     {
         return;
     }
 
     try
     {
-        await spotifyFetch(`/me/player/play?device_id=${deviceId.value}`, { method: 'PUT' });
+        await player.resume();
     }
-    catch
+    catch (err)
     {
-        // error already recorded by spotifyFetch
+        console.error('[spotify] local resume failed', err);
+        error.value = 'Spotify resume failed';
+    }
+}
+
+async function seek(positionMs: number): Promise<void> {
+    if (player === null)
+    {
+        return;
+    }
+
+    try
+    {
+        await player.seek(positionMs);
+    }
+    catch (err)
+    {
+        console.error('[spotify] local seek failed', err);
+        error.value = 'Spotify seek failed';
     }
 }
 
 async function playFromStart(spotifyTrackId: string, shouldBePlaying: boolean): Promise<void> {
+    console.log('[spotify] playFromStart called', spotifyTrackId, shouldBePlaying, 'deviceId=', deviceId.value, 'loadedTrackId=', loadedTrackId);
+
     if (deviceId.value === null)
     {
         error.value = 'Spotify player not ready yet';
@@ -351,14 +500,61 @@ async function playFromStart(spotifyTrackId: string, shouldBePlaying: boolean): 
 
     try
     {
-        await spotifyFetch(`/me/player/play?device_id=${deviceId.value}`, {
-            method: 'PUT',
-            body: JSON.stringify({ uris: [`spotify:track:${spotifyTrackId}`], position_ms: 0 }),
-        });
-
-        if (!shouldBePlaying)
+        if (loadedTrackId === spotifyTrackId)
         {
-            await pause();
+            // Same track already loaded on this device — just seek back to 0 instead of
+            // reissuing a fresh `play` with `uris`, which tears down and recreates the
+            // DRM (Widevine) license session for the content and can fail with a 400 on
+            // the widevine-license endpoint if done repeatedly in quick succession.
+            await seek(0);
+            positionBaselineMs = 0;
+            positionBaselineAt = Date.now();
+
+            if (shouldBePlaying)
+            {
+                await resume();
+            }
+            else
+            {
+                await pause();
+            }
+        }
+        else
+        {
+            await spotifyFetch(`/me/player/play?device_id=${deviceId.value}`, {
+                method: 'PUT',
+                body: JSON.stringify({ uris: [`spotify:track:${spotifyTrackId}`], position_ms: 0 }),
+            });
+
+            loadedTrackId = spotifyTrackId;
+
+            // Wait for the SDK to confirm the device actually loaded this track before
+            // pausing — pausing immediately after the `play` request only confirms Spotify
+            // *accepted* the command, not that audio has started buffering. Pausing too
+            // early can abort the load entirely, leaving the device with no active context
+            // (so a later resume/seek has nothing to act on and nothing audible ever plays).
+            await waitForTrackToLoad(spotifyTrackId);
+
+            if (!shouldBePlaying)
+            {
+                await pause();
+
+                // Spotify's REST API confirms a pause command was *accepted* immediately,
+                // but the device takes a noticeable moment longer to actually stop —
+                // seeking before that has genuinely happened lands the seek on a device
+                // that's still playing, so it keeps drifting forward after the seek and
+                // settles on some non-zero position instead of 0. Wait for the SDK to
+                // confirm playback actually stopped before resetting position.
+                await waitForPaused();
+
+                // The track was genuinely playing for real (and the snippet clock was
+                // ticking) for however long the load confirmation above took. Reset the
+                // position back to 0 so that budget isn't already spent by the time the
+                // master actually presses play.
+                await seek(0);
+                positionBaselineMs = 0;
+                positionBaselineAt = Date.now();
+            }
         }
     }
     catch
@@ -387,5 +583,8 @@ export function useSpotifyPlayer() {
         playFromStart,
         pause,
         resume,
+        getEstimatedPositionMs,
+        activateElement,
+        ensureReady,
     };
 }

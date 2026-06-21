@@ -74,6 +74,29 @@ final readonly class GameSessionManager
         return $game;
     }
 
+    public function autoPauseIfExpired(Game $game): Game
+    {
+        if (!$game->isPlaying())
+        {
+            return $game;
+        }
+
+        $stepLimit = GameRules::STEPS[$game->getCurrentStepIndex()];
+
+        if ($game->getCurrentElapsedSeconds() < $stepLimit)
+        {
+            return $game;
+        }
+
+        $game
+            ->setElapsedSeconds($stepLimit)
+            ->setPlaybackResumedAt(null);
+
+        $this->entityManager->flush();
+
+        return $game;
+    }
+
     public function setPlaying(Game $game, bool $playing): Game
     {
         if ($playing && !$game->isPlaying())
@@ -120,7 +143,7 @@ final readonly class GameSessionManager
     {
         $game
             ->setElapsedSeconds(0.0)
-            ->setPlaybackResumedAt($game->isPlaying() ? new \DateTime() : null);
+            ->setPlaybackResumedAt(new \DateTime());
 
         $this->entityManager->flush();
 

@@ -111,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import SbIcon from '../components/SbIcon.vue';
 import SpotifyCard from '../components/SpotifyCard.vue';
 import StepBar from '../components/StepBar.vue';
@@ -131,13 +131,24 @@ const state = computed(() => props.session.state.value);
 
 const guess = ref('');
 
-function syncSpotifyIfTrackChanged(previousTrackId: string | null): void {
+async function syncSpotifyIfTrackChanged(previousTrackId: string | null): Promise<void> {
     const newTrackId = state.value?.spotifyTrackId ?? null;
 
-    if (newTrackId && newTrackId !== previousTrackId && spotify.isReady.value)
+    if (!newTrackId || newTrackId === previousTrackId)
     {
-        spotify.playFromStart(newTrackId, state.value!.isPlaying);
+        return;
     }
+
+    const ready = await spotify.ensureReady();
+
+    if (!ready)
+    {
+        spotify.error.value = 'Spotify player not ready (isReady=false) — track changed but nothing was sent to Spotify';
+
+        return;
+    }
+
+    spotify.playFromStart(newTrackId, state.value!.isPlaying);
 }
 
 const stepLimit = computed(() => STEPS[state.value?.stepIndex ?? 0]);
@@ -162,45 +173,150 @@ const nextStepLabel = computed(() => {
     return '—';
 });
 
+let watchdogHandle: ReturnType<typeof setInterval> | null = null;
+
+function checkSnippetLimit(): void {
+    // Gate on Spotify's own playing state, not `state.value.isPlaying` — that flag
+    // comes from the backend's wall-clock timer and only updates once per ~1.5s
+    // poll. If that clock crosses the limit and flips it to false before this
+    // position-based check catches up, gating on it here would exit early and
+    // never re-arm, leaving the real audio playing forever. Spotify's own state is
+    // the ground truth for whether audio is actually still going.
+    if (!spotify.isReady.value || !spotify.isPlaying.value)
+    {
+        return;
+    }
+
+    if (spotify.getEstimatedPositionMs() >= stepLimit.value * 1000)
+    {
+        spotify.pause();
+
+        if (state.value?.isPlaying)
+        {
+            props.session.setPlaying(false).catch(() => undefined);
+        }
+    }
+}
+
+onMounted(() => {
+    watchdogHandle = setInterval(checkSnippetLimit, 150);
+});
+
+onBeforeUnmount(() => {
+    if (watchdogHandle !== null)
+    {
+        clearInterval(watchdogHandle);
+        watchdogHandle = null;
+    }
+});
+
 const leaderboard = computed(() =>
     [...(state.value?.players ?? [])].sort((a, b) => b.score - a.score),
 );
 
-function togglePlaying(): void {
+async function togglePlaying(): Promise<void> {
     if (!state.value)
     {
         return;
     }
 
+    void spotify.activateElement();
+
     const playing = !state.value.isPlaying;
 
-    props.session.setPlaying(playing).then(() => {
-        if (spotify.isReady.value)
-        {
-            playing ? spotify.resume() : spotify.pause();
-        }
-    }).catch(() => undefined);
+    try
+    {
+        await props.session.setPlaying(playing);
+    }
+    catch
+    {
+        return;
+    }
+
+    const ready = await spotify.ensureReady();
+
+    if (!ready)
+    {
+        spotify.error.value = 'Spotify player not ready (isReady=false) — play/pause was not sent to Spotify';
+
+        return;
+    }
+
+    if (playing)
+    {
+        spotify.resume();
+    }
+    else
+    {
+        spotify.pause();
+    }
 }
 
-function skip(): void {
+async function skip(): Promise<void> {
+    void spotify.activateElement();
+
     const previousTrackId = state.value?.spotifyTrackId ?? null;
 
-    props.session.skip().then(() => syncSpotifyIfTrackChanged(previousTrackId)).catch(() => undefined);
+    try
+    {
+        await props.session.skip();
+    }
+    catch
+    {
+        return;
+    }
+
+    await syncSpotifyIfTrackChanged(previousTrackId);
 }
 
-function restart(): void {
-    props.session.restart().then(() => {
-        if (state.value?.spotifyTrackId && spotify.isReady.value)
-        {
-            spotify.playFromStart(state.value.spotifyTrackId, state.value.isPlaying);
-        }
-    }).catch(() => undefined);
+async function restart(): Promise<void> {
+    void spotify.activateElement();
+
+    try
+    {
+        await props.session.restart();
+    }
+    catch (err)
+    {
+        spotify.error.value = `Game restart request failed: ${err instanceof Error ? err.message : String(err)}`;
+
+        return;
+    }
+
+    if (!state.value?.spotifyTrackId)
+    {
+        spotify.error.value = 'No Spotify track id for the current song — nothing to restart';
+
+        return;
+    }
+
+    const ready = await spotify.ensureReady();
+
+    if (!ready)
+    {
+        spotify.error.value = 'Spotify player not ready (isReady=false) — restart was not sent to Spotify';
+
+        return;
+    }
+
+    spotify.playFromStart(state.value.spotifyTrackId, state.value.isPlaying);
 }
 
-function next(): void {
+async function next(): Promise<void> {
+    void spotify.activateElement();
+
     const previousTrackId = state.value?.spotifyTrackId ?? null;
 
-    props.session.nextSong().then(() => syncSpotifyIfTrackChanged(previousTrackId)).catch(() => undefined);
+    try
+    {
+        await props.session.nextSong();
+    }
+    catch
+    {
+        return;
+    }
+
+    await syncSpotifyIfTrackChanged(previousTrackId);
 }
 
 function submitGuess(): void {
