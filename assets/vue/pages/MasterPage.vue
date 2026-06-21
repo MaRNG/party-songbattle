@@ -66,23 +66,7 @@
 
                 <div v-if="state.mode === 'solo'">
                     <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
-                    <div style="position: relative;">
-                        <input
-                            v-model="guess"
-                            class="input"
-                            :placeholder="t.type_a_song"
-                            style="padding-right: 100px; font-size: 16px;"
-                            @keydown.enter="submitGuess"
-                        />
-                        <button
-                            class="btn btn-primary btn-sm"
-                            :disabled="!guess.trim()"
-                            style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"
-                            @click="submitGuess"
-                        >
-                            <SbIcon name="Send" /> {{ t.submit }}
-                        </button>
-                    </div>
+                    <GuessInput :t="t" :session="session" @guess="submitGuess" />
                 </div>
             </div>
 
@@ -111,8 +95,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import SbIcon from '../components/SbIcon.vue';
+import GuessInput from '../components/GuessInput.vue';
 import SpotifyCard from '../components/SpotifyCard.vue';
 import StepBar from '../components/StepBar.vue';
 import { STEPS, type Strings } from '../composables/i18n';
@@ -128,28 +113,6 @@ const emit = defineEmits<{
 const spotify = useSpotifyPlayer();
 
 const state = computed(() => props.session.state.value);
-
-const guess = ref('');
-
-async function syncSpotifyIfTrackChanged(previousTrackId: string | null): Promise<void> {
-    const newTrackId = state.value?.spotifyTrackId ?? null;
-
-    if (!newTrackId || newTrackId === previousTrackId)
-    {
-        return;
-    }
-
-    const ready = await spotify.ensureReady();
-
-    if (!ready)
-    {
-        spotify.error.value = 'Spotify player not ready (isReady=false) — track changed but nothing was sent to Spotify';
-
-        return;
-    }
-
-    spotify.playFromStart(newTrackId, state.value!.isPlaying);
-}
 
 const stepLimit = computed(() => STEPS[state.value?.stepIndex ?? 0]);
 
@@ -255,18 +218,10 @@ async function togglePlaying(): Promise<void> {
 async function skip(): Promise<void> {
     void spotify.activateElement();
 
-    const previousTrackId = state.value?.spotifyTrackId ?? null;
-
-    try
-    {
-        await props.session.skip();
-    }
-    catch
-    {
-        return;
-    }
-
-    await syncSpotifyIfTrackChanged(previousTrackId);
+    // No explicit Spotify sync here — if this advances to a new track (last step ->
+    // next song), GamePage's global spotifyTrackId watcher picks it up. If it's just a
+    // step increment within the same track, there's nothing to sync.
+    await props.session.skip().catch(() => undefined);
 }
 
 async function restart(): Promise<void> {
@@ -305,29 +260,11 @@ async function restart(): Promise<void> {
 async function next(): Promise<void> {
     void spotify.activateElement();
 
-    const previousTrackId = state.value?.spotifyTrackId ?? null;
-
-    try
-    {
-        await props.session.nextSong();
-    }
-    catch
-    {
-        return;
-    }
-
-    await syncSpotifyIfTrackChanged(previousTrackId);
+    // GamePage's global spotifyTrackId watcher handles the Spotify sync once this resolves.
+    await props.session.nextSong().catch(() => undefined);
 }
 
-function submitGuess(): void {
-    const text = guess.value.trim();
-
-    if (text === '')
-    {
-        return;
-    }
-
+function submitGuess(text: string): void {
     emit('guess', text);
-    guess.value = '';
 }
 </script>

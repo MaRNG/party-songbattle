@@ -38,6 +38,17 @@ final readonly class GameStateProvider
             ? $this->resolveSpotifyTrackId($currentTrack)
             : null;
 
+        // The previously played track's round has already concluded (correctly guessed,
+        // or skipped/advanced past) — unlike the current track, there's no spoiler risk
+        // in revealing it, and unlike `track` this is shown to every viewer regardless of
+        // role or mode, so solo players and non-master players in robin/all both find out
+        // what the song was.
+        $previousPosition = $game->getCurrentTrackPosition() - 1;
+        $previousGameTrack = $previousPosition >= 0 ? ($tracks[$previousPosition] ?? null) : null;
+        $previousTrack = $previousGameTrack instanceof GameTrack
+            ? new GameTrackInfoDto($previousGameTrack->getTrackName(), $previousGameTrack->getArtistName())
+            : null;
+
         return new GameStateDto(
             code         : $game->getCode(),
             hash         : $game->getHash(),
@@ -52,6 +63,7 @@ final readonly class GameStateProvider
             trackPosition: $game->getCurrentTrackPosition(),
             totalTracks  : count($tracks),
             track        : $revealTrack ? new GameTrackInfoDto($currentTrack->getTrackName(), $currentTrack->getArtistName()) : null,
+            previousTrack: $previousTrack,
             spotifyTrackId: $spotifyTrackId,
             players      : array_map(
                 fn(GamePlayer $player) => $this->mapPlayer($player, $viewer),

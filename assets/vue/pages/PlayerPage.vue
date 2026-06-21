@@ -34,23 +34,7 @@
 
                 <div>
                     <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
-                    <div style="position: relative;">
-                        <input
-                            v-model="guess"
-                            class="input"
-                            :placeholder="t.type_a_song"
-                            style="padding-right: 100px; font-size: 16px;"
-                            @keydown.enter="submit"
-                        />
-                        <button
-                            class="btn btn-primary btn-sm"
-                            :disabled="!guess.trim()"
-                            style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"
-                            @click="submit"
-                        >
-                            <SbIcon name="Send" /> {{ t.submit }}
-                        </button>
-                    </div>
+                    <GuessInput :t="t" :session="session" @guess="onGuess" />
                     <div v-if="feedback" class="mono small dim" style="margin-top: 6px;">{{ feedback }}</div>
                 </div>
 
@@ -71,7 +55,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import Vinyl from '../components/Vinyl.vue';
-import SbIcon from '../components/SbIcon.vue';
+import GuessInput from '../components/GuessInput.vue';
 import StepBar from '../components/StepBar.vue';
 import { STEPS, type Strings } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
@@ -108,20 +92,10 @@ const fillPercent = computed(() => {
     return Math.min(100, (state.value.elapsedSeconds / stepLimit.value) * 100);
 });
 
-const guess = ref('');
 const feedback = ref('');
 
-async function submit(): Promise<void> {
-    const text = guess.value.trim();
-
-    if (text === '')
-    {
-        return;
-    }
-
+function onGuess(text: string): void {
     feedback.value = '';
     emit('guess', text);
-
-    guess.value = '';
 }
 </script>

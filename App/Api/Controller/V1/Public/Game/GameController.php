@@ -21,6 +21,7 @@ use App\Model\Game\Dto\GameGuessResultDto;
 use App\Model\Game\Dto\GamePlayerStateDto;
 use App\Model\Game\Dto\GameSessionDto;
 use App\Model\Game\Dto\GameStateDto;
+use App\Model\Game\Dto\GameTrackInfoDto;
 use Psr\Http\Message\ResponseInterface;
 
 #[Path('/songbattle')]
@@ -151,6 +152,24 @@ final class GameController extends BasePublicV1Controller
         return $response->writeJsonBody($this->serializeGuessResult($result));
     }
 
+    #[Path('/games/{hash}/suggest')]
+    #[Method('GET')]
+    #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
+    public function suggest(ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        $query = (string)($request->getQueryParams()['q'] ?? '');
+
+        $suggestions = $this->gameFacade->suggestTracks(
+            (string)$request->getParameter('hash'),
+            $this->parseToken($request),
+            $query,
+        );
+
+        return $response->writeJsonBody([
+            'suggestions' => array_map($this->serializeTrackInfo(...), $suggestions),
+        ]);
+    }
+
     private function parseToken(ApiRequest $request): string
     {
         $token = $request->getHeaderLine('X-Player-Token');
@@ -263,10 +282,8 @@ final class GameController extends BasePublicV1Controller
             'totalSteps'    => $dto->totalSteps,
             'trackPosition' => $dto->trackPosition,
             'totalTracks'   => $dto->totalTracks,
-            'track'         => $dto->track === null ? null : [
-                'trackName'  => $dto->track->trackName,
-                'artistName' => $dto->track->artistName,
-            ],
+            'track'         => $dto->track === null ? null : $this->serializeTrackInfo($dto->track),
+            'previousTrack' => $dto->previousTrack === null ? null : $this->serializeTrackInfo($dto->previousTrack),
             'spotifyTrackId' => $dto->spotifyTrackId,
             'players'       => array_map($this->serializePlayerState(...), $dto->players),
         ];
@@ -285,6 +302,14 @@ final class GameController extends BasePublicV1Controller
             'guesses'   => $player->guesses,
             'connected' => $player->connected,
             'isViewer'  => $player->isViewer,
+        ];
+    }
+
+    private function serializeTrackInfo(GameTrackInfoDto $dto): array
+    {
+        return [
+            'trackName'  => $dto->trackName,
+            'artistName' => $dto->artistName,
         ];
     }
 

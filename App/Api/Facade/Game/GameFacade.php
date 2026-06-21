@@ -5,8 +5,10 @@ namespace App\Api\Facade\Game;
 use Apitte\Core\Exception\Api\ClientErrorException;
 use App\Infrastructure\Database\Entity\Game\Game;
 use App\Infrastructure\Database\Entity\Game\GamePlayer;
+use App\Infrastructure\Database\Entity\Game\GameTrack;
 use App\Infrastructure\Database\Repository\GamePlayerRepository;
 use App\Infrastructure\Database\Repository\GameRepository;
+use App\Infrastructure\Database\Repository\GameTrackRepository;
 use App\Model\Enum\GameModeEnum;
 use App\Model\Enum\GamePlayerRoleEnum;
 use App\Model\Game\Dto\GameFilterListDto;
@@ -14,6 +16,7 @@ use App\Model\Game\Dto\GameFilterOptionsDto;
 use App\Model\Game\Dto\GameGuessResultDto;
 use App\Model\Game\Dto\GameSessionDto;
 use App\Model\Game\Dto\GameStateDto;
+use App\Model\Game\Dto\GameTrackInfoDto;
 use App\Model\Game\GameFactory;
 use App\Model\Game\GameFilterOptionsProvider;
 use App\Model\Game\GameSessionManager;
@@ -24,6 +27,7 @@ final readonly class GameFacade
     public function __construct(
         private GameRepository           $gameRepository,
         private GamePlayerRepository     $gamePlayerRepository,
+        private GameTrackRepository      $gameTrackRepository,
         private GameFactory              $gameFactory,
         private GameFilterOptionsProvider $gameFilterOptionsProvider,
         private GameSessionManager       $gameSessionManager,
@@ -126,6 +130,29 @@ final readonly class GameFacade
         $player = $this->getPlayerByToken($game, $token);
 
         return $this->gameSessionManager->submitGuess($game, $player, $guess);
+    }
+
+    /**
+     * @return array<int,GameTrackInfoDto>
+     */
+    public function suggestTracks(string $hash, string $token, string $query): array
+    {
+        $game = $this->getGameByHash($hash);
+        $this->getPlayerByToken($game, $token);
+
+        $query = trim($query);
+
+        if ($query === '')
+        {
+            return [];
+        }
+
+        $tracks = $this->gameTrackRepository->searchByGame($game, $query);
+
+        return array_map(
+            static fn (GameTrack $track) => new GameTrackInfoDto($track->getTrackName(), $track->getArtistName()),
+            $tracks,
+        );
     }
 
     private function getGameByHash(string $hash): Game

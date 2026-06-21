@@ -4,7 +4,7 @@
         <div class="cover" />
         <div class="meta">
             <p class="title">{{ trackName }}</p>
-            <p class="artist"><template v-if="prefix">{{ prefix }} </template>{{ artistName }}</p>
+            <p class="artist"><template v-if="prefix">{{ prefix }} </template> {{ artistName }}</p>
             <div class="tag-row">
                 <slot name="tags" />
             </div>

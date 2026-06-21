@@ -166,12 +166,6 @@ final readonly class GameSessionManager
                 ->setScore($player->getScore() + $points)
                 ->setStreak($player->getStreak() + 1);
 
-            $game
-                ->setElapsedSeconds($atSeconds)
-                ->setPlaybackResumedAt(null);
-
-            $track->setPlayed(true);
-
             $gameGuess = new GameGuess();
 
             $gameGuess
@@ -183,7 +177,11 @@ final readonly class GameSessionManager
                 ->setPoints($points);
 
             $this->entityManager->persist($gameGuess);
-            $this->entityManager->flush();
+
+            // A correct guess ends the round for this track — move on to the next one
+            // (or finish the game) instead of just pausing in place, so guessing right
+            // is what actually advances the game.
+            $this->advanceToNextTrack($game);
 
             return new GameGuessResultDto(
                 correct  : true,

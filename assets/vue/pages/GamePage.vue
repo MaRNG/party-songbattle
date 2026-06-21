@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import RoomPage from './RoomPage.vue';
 import MasterPage from './MasterPage.vue';
@@ -50,11 +50,26 @@ import ResultsPage from './ResultsPage.vue';
 import type { Strings, Lang } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
 import type { GuessResultDto, TrackInfoDto } from '../api/client';
+import { useSpotifyPlayer } from '../composables/useSpotifyPlayer';
 
 const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
 
 const route = useRoute();
 const router = useRouter();
+const spotify = useSpotifyPlayer();
+
+// Lives here (not in MasterPage) because MasterPage unmounts during the Correct/Missed
+// overlay — exactly the window in which a correct guess (or skip's last-step advance)
+// changes the track. Comparing against the singleton's own `loadedTrackId` internally
+// makes this safe to fire from a freshly (re)mounted GamePage too.
+watch(() => props.session.state.value?.spotifyTrackId, (trackId) => {
+    if (!trackId || !props.session.isMaster.value)
+    {
+        return;
+    }
+
+    void spotify.ensureTrackLoaded(trackId, props.session.state.value?.isPlaying ?? false);
+});
 
 interface RoundOverlay {
     trackPosition: number;
@@ -66,7 +81,6 @@ interface RoundOverlay {
 const roundOverlay = ref<RoundOverlay | null>(null);
 let overlayTimer: ReturnType<typeof setTimeout> | null = null;
 let lastSeenTrackPosition = -1;
-const previousTrack = ref<TrackInfoDto | null>(null);
 
 function clearOverlayTimer(): void {
     if (overlayTimer !== null)
@@ -116,7 +130,6 @@ function observeStateForOverlay(): void {
     if (lastSeenTrackPosition === -1)
     {
         lastSeenTrackPosition = state.trackPosition;
-        previousTrack.value = state.track;
 
         return;
     }
@@ -128,25 +141,25 @@ function observeStateForOverlay(): void {
 
         if (!wasCorrectForPreviousTrack)
         {
+            // `state.previousTrack` is computed server-side from the (already advanced)
+            // position - 1, and unlike `state.track` it's revealed to every viewer
+            // regardless of role/mode, since that round has already concluded.
             showOverlay({
                 trackPosition: lastSeenTrackPosition,
                 correct: false,
                 guessResult: null,
-                track: previousTrack.value,
+                track: state.previousTrack,
             });
         }
 
         lastSeenTrackPosition = state.trackPosition;
     }
-
-    previousTrack.value = state.track;
 }
 
 let observerInterval: ReturnType<typeof setInterval> | null = null;
 
 function startObserving(): void {
     lastSeenTrackPosition = props.session.state.value?.trackPosition ?? -1;
-    previousTrack.value = props.session.state.value?.track ?? null;
     props.session.startPolling();
 
     if (observerInterval !== null)
@@ -174,13 +187,17 @@ async function handleGuess(text: string): Promise<void> {
 
     if (result?.correct)
     {
-        const state = props.session.state.value;
+        // submitGuess() only returns the guess result, not the new state — the backend
+        // already advanced the track, but our local `state` is still the stale pre-guess
+        // snapshot. Refresh now so `previousTrack` reflects the track that was just
+        // guessed instead of whatever the previous round transition was.
+        const refreshed = await props.session.refreshState();
 
         showOverlay({
-            trackPosition: state?.trackPosition ?? lastSeenTrackPosition,
+            trackPosition: lastSeenTrackPosition,
             correct: true,
             guessResult: result,
-            track: state?.track ?? null,
+            track: refreshed?.previousTrack ?? null,
         });
     }
 }

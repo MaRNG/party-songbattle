@@ -488,6 +488,48 @@ async function seek(positionMs: number): Promise<void> {
     }
 }
 
+async function loadNewTrack(spotifyTrackId: string, shouldBePlaying: boolean): Promise<void> {
+    if (deviceId.value === null)
+    {
+        return;
+    }
+
+    await spotifyFetch(`/me/player/play?device_id=${deviceId.value}`, {
+        method: 'PUT',
+        body: JSON.stringify({ uris: [`spotify:track:${spotifyTrackId}`], position_ms: 0 }),
+    });
+
+    loadedTrackId = spotifyTrackId;
+
+    // Wait for the SDK to confirm the device actually loaded this track before
+    // pausing — pausing immediately after the `play` request only confirms Spotify
+    // *accepted* the command, not that audio has started buffering. Pausing too
+    // early can abort the load entirely, leaving the device with no active context
+    // (so a later resume/seek has nothing to act on and nothing audible ever plays).
+    await waitForTrackToLoad(spotifyTrackId);
+
+    if (!shouldBePlaying)
+    {
+        await pause();
+
+        // Spotify's REST API confirms a pause command was *accepted* immediately,
+        // but the device takes a noticeable moment longer to actually stop —
+        // seeking before that has genuinely happened lands the seek on a device
+        // that's still playing, so it keeps drifting forward after the seek and
+        // settles on some non-zero position instead of 0. Wait for the SDK to
+        // confirm playback actually stopped before resetting position.
+        await waitForPaused();
+
+        // The track was genuinely playing for real (and the snippet clock was
+        // ticking) for however long the load confirmation above took. Reset the
+        // position back to 0 so that budget isn't already spent by the time the
+        // master actually presses play.
+        await seek(0);
+        positionBaselineMs = 0;
+        positionBaselineAt = Date.now();
+    }
+}
+
 async function playFromStart(spotifyTrackId: string, shouldBePlaying: boolean): Promise<void> {
     console.log('[spotify] playFromStart called', spotifyTrackId, shouldBePlaying, 'deviceId=', deviceId.value, 'loadedTrackId=', loadedTrackId);
 
@@ -521,41 +563,41 @@ async function playFromStart(spotifyTrackId: string, shouldBePlaying: boolean): 
         }
         else
         {
-            await spotifyFetch(`/me/player/play?device_id=${deviceId.value}`, {
-                method: 'PUT',
-                body: JSON.stringify({ uris: [`spotify:track:${spotifyTrackId}`], position_ms: 0 }),
-            });
-
-            loadedTrackId = spotifyTrackId;
-
-            // Wait for the SDK to confirm the device actually loaded this track before
-            // pausing — pausing immediately after the `play` request only confirms Spotify
-            // *accepted* the command, not that audio has started buffering. Pausing too
-            // early can abort the load entirely, leaving the device with no active context
-            // (so a later resume/seek has nothing to act on and nothing audible ever plays).
-            await waitForTrackToLoad(spotifyTrackId);
-
-            if (!shouldBePlaying)
-            {
-                await pause();
-
-                // Spotify's REST API confirms a pause command was *accepted* immediately,
-                // but the device takes a noticeable moment longer to actually stop —
-                // seeking before that has genuinely happened lands the seek on a device
-                // that's still playing, so it keeps drifting forward after the seek and
-                // settles on some non-zero position instead of 0. Wait for the SDK to
-                // confirm playback actually stopped before resetting position.
-                await waitForPaused();
-
-                // The track was genuinely playing for real (and the snippet clock was
-                // ticking) for however long the load confirmation above took. Reset the
-                // position back to 0 so that budget isn't already spent by the time the
-                // master actually presses play.
-                await seek(0);
-                positionBaselineMs = 0;
-                positionBaselineAt = Date.now();
-            }
+            await loadNewTrack(spotifyTrackId, shouldBePlaying);
         }
+    }
+    catch
+    {
+        // error already recorded by spotifyFetch
+    }
+}
+
+async function ensureTrackLoaded(spotifyTrackId: string, shouldBePlaying: boolean): Promise<void> {
+    console.log('[spotify] ensureTrackLoaded called', spotifyTrackId, shouldBePlaying, 'deviceId=', deviceId.value, 'loadedTrackId=', loadedTrackId);
+
+    // Passive sync for a track change that happened for a reason other than an explicit
+    // restart click (skip advancing past the last step, next song, or a correct guess
+    // ending the round) — comparing against the module-level `loadedTrackId` (not a
+    // per-component "previous id") means this is safe to call from anywhere, including
+    // right after a component remounts, without redundantly reloading/repositioning a
+    // track that's already correctly loaded.
+    if (loadedTrackId === spotifyTrackId)
+    {
+        return;
+    }
+
+    const ready = await ensureReady();
+
+    if (!ready)
+    {
+        error.value = 'Spotify player not ready (isReady=false) — track changed but nothing was sent to Spotify';
+
+        return;
+    }
+
+    try
+    {
+        await loadNewTrack(spotifyTrackId, shouldBePlaying);
     }
     catch
     {
@@ -586,5 +628,6 @@ export function useSpotifyPlayer() {
         getEstimatedPositionMs,
         activateElement,
         ensureReady,
+        ensureTrackLoaded,
     };
 }
