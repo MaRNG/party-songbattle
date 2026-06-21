@@ -107,6 +107,17 @@ final readonly class GameFacade
         return $this->gameStateProvider->get($game, $player);
     }
 
+    public function restart(string $hash, string $token): GameStateDto
+    {
+        $game = $this->getGameByHash($hash);
+        $player = $this->getPlayerByToken($game, $token);
+
+        $this->assertMaster($player);
+        $this->gameSessionManager->restart($game);
+
+        return $this->gameStateProvider->get($game, $player);
+    }
+
     public function submitGuess(string $hash, string $token, string $guess): GameGuessResultDto
     {
         $game = $this->getGameByHash($hash);

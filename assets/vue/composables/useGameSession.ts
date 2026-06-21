@@ -108,7 +108,16 @@ export function useGameSession() {
             return null;
         }
 
-        state.value = await SongBattleApi.getState(game.value.hash, player.value.token);
+        const hash = game.value.hash;
+        const token = player.value.token;
+        const fetched = await SongBattleApi.getState(hash, token);
+
+        if (game.value?.hash !== hash || player.value?.token !== token)
+        {
+            return null;
+        }
+
+        state.value = fetched;
 
         return state.value;
     }
@@ -164,6 +173,15 @@ export function useGameSession() {
         state.value = await SongBattleApi.nextSong(game.value.hash, player.value.token);
     }
 
+    async function restart(): Promise<void> {
+        if (game.value === null || player.value === null)
+        {
+            return;
+        }
+
+        state.value = await SongBattleApi.restart(game.value.hash, player.value.token);
+    }
+
     async function submitGuess(guess: string) {
         if (game.value === null || player.value === null)
         {
@@ -189,6 +207,7 @@ export function useGameSession() {
         setPlaying,
         skip,
         nextSong,
+        restart,
         submitGuess,
     };
 }

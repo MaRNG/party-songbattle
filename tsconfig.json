@@ -9,7 +9,7 @@
         "resolveJsonModule": true,
         "esModuleInterop": true,
         "lib": ["ES2020", "DOM"],
-        "types": ["vue"]
+        "types": ["vue", "spotify-web-playback-sdk"]
     },
     "include": ["assets/**/*.ts", "assets/**/*.vue"]
 }

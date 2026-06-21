@@ -37,7 +37,16 @@
 
                 <div class="divider" />
 
-                <button v-if="session.isMaster.value" class="btn btn-primary btn-block" @click="start">
+                <button
+                    v-if="session.isMaster.value && !spotify.isAuthenticated.value"
+                    class="btn btn-ghost btn-block mt-8"
+                    @click="spotify.connect()"
+                >
+                    <SbIcon name="Disc" /> {{ lang === 'cs' ? 'Připojit Spotify' : 'Connect Spotify' }}
+                </button>
+                <div v-if="spotify.error.value" class="mono small muted center mt-8">{{ spotify.error.value }}</div>
+
+                <button v-if="session.isMaster.value" class="btn btn-primary btn-block mt-8" @click="start">
                     <SbIcon name="PlayFill" /> {{ t.start_game }}
                 </button>
                 <div v-else class="mono small muted center">
@@ -58,8 +67,11 @@ import { computed } from 'vue';
 import SbIcon from '../components/SbIcon.vue';
 import type { Strings, Lang } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
+import { useSpotifyPlayer } from '../composables/useSpotifyPlayer';
 
 const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
+
+const spotify = useSpotifyPlayer();
 
 const code = computed(() => props.session.game.value?.code ?? '');
 const players = computed(() => props.session.state.value?.players ?? []);
@@ -72,6 +84,13 @@ function copyCode(): void {
 }
 
 function start(): void {
-    props.session.startGame().catch(() => undefined);
+    props.session.startGame().then(() => {
+        const state = props.session.state.value;
+
+        if (state?.spotifyTrackId && spotify.isReady.value)
+        {
+            spotify.playFromStart(state.spotifyTrackId, state.isPlaying);
+        }
+    }).catch(() => undefined);
 }
 </script>

@@ -11,7 +11,7 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 380px; margin: 0 auto;">
-            <button class="btn btn-primary btn-block" @click="$emit('create')">
+            <button class="btn btn-primary btn-block" @click="router.push('/create')">
                 <SbIcon name="Plus" /> {{ t.cta_create }}
             </button>
             <div style="display: flex; align-items: center; gap: 10px; color: var(--dim); font-size: 12px;">
@@ -36,28 +36,35 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import Vinyl from '../components/Vinyl.vue';
 import SbIcon from '../components/SbIcon.vue';
 import type { Strings, Lang } from '../composables/i18n';
+import type { GameSession } from '../composables/useGameSession';
 
-defineProps<{ t: Strings; lang: Lang }>();
+const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
 
-const emit = defineEmits<{
-    (e: 'create'): void;
-    (e: 'join', hash: string, name: string): void;
-}>();
+const router = useRouter();
 
 const name = ref('');
 const code = ref('');
 
 const canJoin = computed(() => name.value.trim() !== '' && code.value.trim() !== '');
 
-function join(): void {
+async function join(): Promise<void> {
     if (!canJoin.value)
     {
         return;
     }
 
-    emit('join', code.value.trim().toUpperCase(), name.value.trim());
+    try
+    {
+        await props.session.join(code.value.trim().toUpperCase(), name.value.trim());
+        await router.push({ name: 'game', params: { hash: props.session.game.value!.hash } });
+    }
+    catch
+    {
+        // no error UI yet, fail silently
+    }
 }
 </script>

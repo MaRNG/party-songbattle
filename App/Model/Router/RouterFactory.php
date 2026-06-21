@@ -32,7 +32,7 @@ final class RouterFactory
         $list->addRoute('/hra/tracks-pool/<gameHash>', 'Game:tracksPool');
         $list->addRoute('/hra/menu/<gameHash>', 'Game:menu');
 
-        // Default route
-        $list->addRoute('<presenter>/<action>[/<id>]', 'Homepage:default');
+        // Vue SPA client-side routes (landing, create, game/<hash>, …) all serve the same app shell
+        $list->addRoute('<path .*>', 'Homepage:default');
     }
 }

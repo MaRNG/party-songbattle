@@ -62,6 +62,7 @@ export interface Strings {
     master_eyebrow: string;
     skip_btn: string;
     next_song: string;
+    restart_btn: string;
     end_game: string;
     current_step: string;
     elapsed: string;
@@ -176,6 +177,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         master_eyebrow: 'POHLED MASTERA',
         skip_btn: 'Skip → další úsek',
         next_song: 'Další písnička',
+        restart_btn: 'Znovu od začátku',
         end_game: 'Ukončit hru',
         current_step: 'Aktuální úsek',
         elapsed: 'Hraje',
@@ -288,6 +290,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         master_eyebrow: 'MASTER VIEW',
         skip_btn: 'Skip → extend',
         next_song: 'Next song',
+        restart_btn: 'Restart from start',
         end_game: 'End game',
         current_step: 'Current step',
         elapsed: 'Elapsed',

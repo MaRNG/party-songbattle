@@ -65,6 +65,7 @@ export interface GameStateDto {
     trackPosition: number;
     totalTracks: number;
     track: TrackInfoDto | null;
+    spotifyTrackId: string | null;
     players: PlayerStateDto[];
 }
 
@@ -149,6 +150,9 @@ export const SongBattleApi = {
 
     nextSong: (hash: string, token: string) =>
         request<GameStateDto>('POST', `/games/${hash}/next`, {}, token),
+
+    restart: (hash: string, token: string) =>
+        request<GameStateDto>('POST', `/games/${hash}/restart`, {}, token),
 
     submitGuess: (hash: string, token: string, guess: string) =>
         request<GuessResultDto>('POST', `/games/${hash}/guess`, { guess }, token),

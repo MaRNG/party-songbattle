@@ -31,6 +31,10 @@ services:
 
     # Api / Controllers
     - App\Api\Controller\V1\Public\Game\GameController
+    - App\Api\Controller\V1\Public\Config\SpotifyConfigController(
+        %spotify.app.clientId%,
+        %spotify.app.redirectUri%
+      )
 
     # External clients
     - App\Infrastructure\ExternalClient\SpotifyExternalClient(%spotify.auth.accessToken%)

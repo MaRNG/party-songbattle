@@ -25,6 +25,7 @@ final readonly class GameStateDto
         public int                $trackPosition,
         public int                $totalTracks,
         public ?GameTrackInfoDto  $track,
+        public ?string            $spotifyTrackId,
         public array              $players,
     )
     {

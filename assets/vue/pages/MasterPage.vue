@@ -6,6 +6,15 @@
             <span class="pill"><SbIcon name="Music" />{{ t.playing }}</span>
         </div>
 
+        <button
+            v-if="!spotify.isAuthenticated.value"
+            class="btn btn-ghost btn-sm mt-8"
+            @click="spotify.connect()"
+        >
+            <SbIcon name="Disc" /> Connect Spotify
+        </button>
+        <div v-if="spotify.error.value" class="mono small muted mt-8">{{ spotify.error.value }}</div>
+
         <div class="grid-2" style="margin-top: 14px;">
             <div class="col">
                 <SpotifyCard
@@ -17,6 +26,7 @@
                         <span class="tag">{{ t.song_n_of_n(state.trackPosition + 1, state.totalTracks) }}</span>
                     </template>
                     <template #controls>
+                        <button class="spfy-btn" @click="restart"><SbIcon name="Restart" /></button>
                         <button class="spfy-btn" @click="skip"><SbIcon name="SkipForward" /></button>
                         <button class="spfy-btn play" @click="togglePlaying">
                             <SbIcon :name="state.isPlaying ? 'Pause' : 'PlayFill'" />
@@ -41,6 +51,9 @@
                     <StepBar :steps="STEPS" :current-idx="state.stepIndex" :t="t" :fill-percent="fillPercent" />
 
                     <div class="row" style="gap: 10px; margin-top: 16px;">
+                        <button class="btn btn-ghost flex-1" @click="restart">
+                            <SbIcon name="Restart" /> {{ t.restart_btn }}
+                        </button>
                         <button class="btn btn-ghost flex-1" @click="skip">
                             <SbIcon name="SkipForward" /> {{ t.skip_btn }}
                         </button>
@@ -48,6 +61,27 @@
                     </div>
                     <div class="mono small muted center" style="margin-top: 8px;">
                         {{ nextStepLabel }}
+                    </div>
+                </div>
+
+                <div v-if="state.mode === 'solo'">
+                    <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
+                    <div style="position: relative;">
+                        <input
+                            v-model="guess"
+                            class="input"
+                            :placeholder="t.type_a_song"
+                            style="padding-right: 100px; font-size: 16px;"
+                            @keydown.enter="submitGuess"
+                        />
+                        <button
+                            class="btn btn-primary btn-sm"
+                            :disabled="!guess.trim()"
+                            style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"
+                            @click="submitGuess"
+                        >
+                            <SbIcon name="Send" /> {{ t.submit }}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -77,16 +111,34 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import SbIcon from '../components/SbIcon.vue';
 import SpotifyCard from '../components/SpotifyCard.vue';
 import StepBar from '../components/StepBar.vue';
 import { STEPS, type Strings } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
+import { useSpotifyPlayer } from '../composables/useSpotifyPlayer';
 
 const props = defineProps<{ t: Strings; session: GameSession }>();
 
+const emit = defineEmits<{
+    (e: 'guess', text: string): void;
+}>();
+
+const spotify = useSpotifyPlayer();
+
 const state = computed(() => props.session.state.value);
+
+const guess = ref('');
+
+function syncSpotifyIfTrackChanged(previousTrackId: string | null): void {
+    const newTrackId = state.value?.spotifyTrackId ?? null;
+
+    if (newTrackId && newTrackId !== previousTrackId && spotify.isReady.value)
+    {
+        spotify.playFromStart(newTrackId, state.value!.isPlaying);
+    }
+}
 
 const stepLimit = computed(() => STEPS[state.value?.stepIndex ?? 0]);
 
@@ -120,14 +172,46 @@ function togglePlaying(): void {
         return;
     }
 
-    props.session.setPlaying(!state.value.isPlaying).catch(() => undefined);
+    const playing = !state.value.isPlaying;
+
+    props.session.setPlaying(playing).then(() => {
+        if (spotify.isReady.value)
+        {
+            playing ? spotify.resume() : spotify.pause();
+        }
+    }).catch(() => undefined);
 }
 
 function skip(): void {
-    props.session.skip().catch(() => undefined);
+    const previousTrackId = state.value?.spotifyTrackId ?? null;
+
+    props.session.skip().then(() => syncSpotifyIfTrackChanged(previousTrackId)).catch(() => undefined);
+}
+
+function restart(): void {
+    props.session.restart().then(() => {
+        if (state.value?.spotifyTrackId && spotify.isReady.value)
+        {
+            spotify.playFromStart(state.value.spotifyTrackId, state.value.isPlaying);
+        }
+    }).catch(() => undefined);
 }
 
 function next(): void {
-    props.session.nextSong().catch(() => undefined);
+    const previousTrackId = state.value?.spotifyTrackId ?? null;
+
+    props.session.nextSong().then(() => syncSpotifyIfTrackChanged(previousTrackId)).catch(() => undefined);
+}
+
+function submitGuess(): void {
+    const text = guess.value.trim();
+
+    if (text === '')
+    {
+        return;
+    }
+
+    emit('guess', text);
+    guess.value = '';
 }
 </script>

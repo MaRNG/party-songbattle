@@ -116,6 +116,17 @@ final readonly class GameSessionManager
         return $this->advanceToNextTrack($game);
     }
 
+    public function restart(Game $game): Game
+    {
+        $game
+            ->setElapsedSeconds(0.0)
+            ->setPlaybackResumedAt($game->isPlaying() ? new \DateTime() : null);
+
+        $this->entityManager->flush();
+
+        return $game;
+    }
+
     public function submitGuess(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
     {
         $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());

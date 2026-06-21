@@ -5,6 +5,7 @@ namespace App;
 use Contributte\Bootstrap\ExtraConfigurator;
 use Nette\Application\Application as NetteApplication;
 use Symfony\Component\Console\Application as SymfonyApplication;
+use Apitte\Core\Application\IApplication as ApitteApplication;
 use Tracy\Debugger;
 
 class Bootstrap
@@ -14,7 +15,7 @@ class Bootstrap
 	{
 		$configurator = new ExtraConfigurator();
 
-        if ($_SERVER['HTTP_HOST'] && str_contains($_SERVER['HTTP_HOST'], '.localhost'))
+        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] && str_contains($_SERVER['HTTP_HOST'], '.localhost'))
         {
             $configurator->setDebugMode(true);
         }
@@ -60,6 +61,17 @@ class Bootstrap
             ])
             ->createContainer()
             ->getByType(SymfonyApplication::class)
+            ->run();
+    }
+
+    public static function runApi(): void
+    {
+        self::boot()
+            ->addStaticParameters([
+                                      'scope' => 'api'
+                                  ])
+            ->createContainer()
+            ->getByType(ApitteApplication::class)
             ->run();
     }
 }

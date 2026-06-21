@@ -4,8 +4,10 @@ namespace App\Model\Game;
 
 use App\Infrastructure\Database\Entity\Game\Game;
 use App\Infrastructure\Database\Entity\Game\GamePlayer;
+use App\Infrastructure\Database\Entity\Game\GameTrack;
 use App\Infrastructure\Database\Repository\GamePlayerRepository;
 use App\Infrastructure\Database\Repository\GameTrackRepository;
+use App\Model\Enum\ExternalSourceEnum;
 use App\Model\Enum\GameModeEnum;
 use App\Model\Enum\GamePlayerRoleEnum;
 use App\Model\Game\Dto\GamePlayerStateDto;
@@ -26,9 +28,15 @@ final readonly class GameStateProvider
         $tracks = $this->gameTrackRepository->findByGame($game);
         $currentTrack = $tracks[$game->getCurrentTrackPosition()] ?? null;
 
+        $isMaster = $viewer->getRole() === GamePlayerRoleEnum::MASTER;
+
         $revealTrack = $currentTrack !== null
-            && $viewer->getRole() === GamePlayerRoleEnum::MASTER
+            && $isMaster
             && $game->getMode() !== GameModeEnum::SOLO;
+
+        $spotifyTrackId = ($isMaster && $currentTrack !== null)
+            ? $this->resolveSpotifyTrackId($currentTrack)
+            : null;
 
         return new GameStateDto(
             code         : $game->getCode(),
@@ -44,11 +52,21 @@ final readonly class GameStateProvider
             trackPosition: $game->getCurrentTrackPosition(),
             totalTracks  : count($tracks),
             track        : $revealTrack ? new GameTrackInfoDto($currentTrack->getTrackName(), $currentTrack->getArtistName()) : null,
+            spotifyTrackId: $spotifyTrackId,
             players      : array_map(
                 fn(GamePlayer $player) => $this->mapPlayer($player, $viewer),
                 $this->gamePlayerRepository->findByGame($game)
             ),
         );
+    }
+
+    private function resolveSpotifyTrackId(GameTrack $currentTrack): ?string
+    {
+        $originTrack = $currentTrack->getOriginTrack();
+
+        return $originTrack->getExternalSource() === ExternalSourceEnum::SPOTIFY
+            ? $originTrack->getExternalId()
+            : null;
     }
 
     private function mapPlayer(GamePlayer $player, GamePlayer $viewer): GamePlayerStateDto

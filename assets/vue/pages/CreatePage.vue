@@ -33,32 +33,35 @@
         <div class="card mt-12 card-glow" style="display: flex; align-items: center; gap: 16px;">
             <div style="flex: 1;">
                 <div class="mono uc muted">~ {{ t.songs_in_pool }}</div>
-                <div style="font-size: 28px; font-weight: 700; line-height: 1; margin-top: 4px; color: var(--neon-1);">
-                    {{ poolCount }}
+                <div style="font-size: 28px; font-weight: 700; line-height: 1; margin-top: 4px; color: var(--neon-1); min-height: 1em;">
+                    <span v-if="optionsLoading" class="sb-spinner" />
+                    <template v-else>{{ poolCount }}</template>
                 </div>
             </div>
             <input v-model="name" class="input" :placeholder="lang === 'cs' ? 'Tvoje jméno' : 'Your name'" style="max-width: 220px;" />
-            <button class="btn btn-primary" :disabled="!canCreate" @click="create">{{ t.create_cta }} →</button>
+            <button class="btn btn-primary" :disabled="!canCreate || creating" @click="create">
+                <span v-if="creating" class="sb-spinner sb-spinner--btn" />
+                <template v-else>{{ t.create_cta }} →</template>
+            </button>
         </div>
 
-        <button class="btn btn-ghost btn-sm mt-12" @click="$emit('back')">← {{ lang === 'cs' ? 'Zpět' : 'Back' }}</button>
+        <button class="btn btn-ghost btn-sm mt-12" @click="router.push('/')">← {{ lang === 'cs' ? 'Zpět' : 'Back' }}</button>
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import FilterRow from '../components/FilterRow.vue';
 import type { FilterRowItem } from '../components/types';
 import SbIcon from '../components/SbIcon.vue';
 import { SongBattleApi, type GameFilterOptions } from '../api/client';
 import type { Strings, Lang } from '../composables/i18n';
+import type { GameSession } from '../composables/useGameSession';
 
-const props = defineProps<{ t: Strings; lang: Lang }>();
+const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
 
-const emit = defineEmits<{
-    (e: 'back'): void;
-    (e: 'created', filters: { years?: number[]; genres?: number[]; areas?: string[]; artists?: number[] }, mode: string, name: string): void;
-}>();
+const router = useRouter();
 
 const mode = ref<'solo' | 'robin' | 'all'>('all');
 const decades = ref<number[]>([]);
@@ -67,6 +70,8 @@ const areas = ref<string[]>([]);
 const name = ref('');
 
 const options = ref<GameFilterOptions | null>(null);
+const optionsLoading = ref(false);
+const creating = ref(false);
 
 const modeCards = computed(() => [
     { id: 'solo' as const, title: props.t.mode_solo_t, desc: props.t.mode_solo_d, icon: 'User' },
@@ -107,11 +112,20 @@ function toggleArea(value: string | number): void {
 }
 
 async function loadOptions(): Promise<void> {
-    options.value = await SongBattleApi.getFilterOptions({
-        years: decades.value,
-        genres: genres.value,
-        areas: areas.value,
-    });
+    optionsLoading.value = true;
+
+    try
+    {
+        options.value = await SongBattleApi.getFilterOptions({
+            years: decades.value,
+            genres: genres.value,
+            areas: areas.value,
+        });
+    }
+    finally
+    {
+        optionsLoading.value = false;
+    }
 }
 
 watch([decades, genres, areas], () => {
@@ -122,16 +136,57 @@ onMounted(() => {
     loadOptions().catch(() => undefined);
 });
 
-function create(): void {
-    if (!canCreate.value)
+async function create(): Promise<void> {
+    if (!canCreate.value || creating.value)
     {
         return;
     }
 
-    emit('created', {
-        years: decades.value,
-        genres: genres.value,
-        areas: areas.value,
-    }, mode.value, name.value.trim());
+    creating.value = true;
+
+    try
+    {
+        await props.session.create({
+            years: decades.value,
+            genres: genres.value,
+            areas: areas.value,
+        }, mode.value, name.value.trim());
+
+        if (mode.value === 'solo')
+        {
+            await props.session.startGame();
+        }
+
+        await router.push({ name: 'game', params: { hash: props.session.game.value!.hash } });
+    }
+    catch (error)
+    {
+        creating.value = false;
+
+        throw error;
+    }
 }
 </script>
+
+<style lang="scss" scoped>
+.sb-spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid color-mix(in oklab, var(--neon-1) 40%, transparent);
+    border-top-color: var(--neon-1);
+    border-radius: 50%;
+    animation: sb-create-spin 0.7s linear infinite;
+}
+
+.sb-spinner--btn {
+    width: 14px;
+    height: 14px;
+    border-color: color-mix(in oklab, currentColor 40%, transparent);
+    border-top-color: currentColor;
+}
+
+@keyframes sb-create-spin {
+    to { transform: rotate(360deg); }
+}
+</style>
