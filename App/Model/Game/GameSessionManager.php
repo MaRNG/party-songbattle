@@ -188,7 +188,10 @@ final readonly class GameSessionManager
 
         if (count($players) === 0)
         {
-            return null;
+            // Nobody is eligible for a turn (e.g. a game that started before turns were
+            // enforced) — fall back to whoever joined the room first instead of leaving
+            // the round stuck with no one able to answer.
+            return $this->gamePlayerRepository->findByGame($game)[0] ?? null;
         }
 
         return $players[$game->getCurrentTurnPosition() % count($players)];
