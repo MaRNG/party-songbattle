@@ -65,7 +65,10 @@ final readonly class GameFactory
 
     private function inflateTracks(Game $game, GameFilterListDto $gameFilterList): void
     {
-        foreach (array_chunk($this->createFilteredQueryBuilder($gameFilterList)->getQuery()->getArrayResult(), 50) as $chunk)
+        $trackRows = $this->createFilteredQueryBuilder($gameFilterList)->getQuery()->getArrayResult();
+        shuffle($trackRows);
+
+        foreach (array_chunk($trackRows, 50) as $chunk)
         {
             $game = $this->gameRepository->find($game->getId());
 
