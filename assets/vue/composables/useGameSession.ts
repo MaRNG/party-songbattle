@@ -55,14 +55,26 @@ export function useGameSession() {
         storeSession(null);
     }
 
-    async function create(filters: { years?: number[]; genres?: number[]; areas?: string[]; artists?: number[] }, mode: string, name: string): Promise<void> {
-        const session = await SongBattleApi.createGame(filters, mode, name);
+    async function create(
+        filters: { years?: number[]; genres?: number[]; areas?: string[]; artists?: number[] },
+        mode: string,
+        name: string,
+        pointsPerStep: number[],
+        showLeaderboardToPlayers: boolean,
+    ): Promise<void> {
+        const session = await SongBattleApi.createGame(filters, mode, name, pointsPerStep, showLeaderboardToPlayers);
 
         applySession(session.game, session.player);
     }
 
     async function join(hash: string, name: string): Promise<void> {
         const session = await SongBattleApi.joinGame(hash, name);
+
+        applySession(session.game, session.player);
+    }
+
+    async function joinByCode(code: string, name: string): Promise<void> {
+        const session = await SongBattleApi.joinGameByCode(code, name);
 
         applySession(session.game, session.player);
     }
@@ -182,6 +194,15 @@ export function useGameSession() {
         state.value = await SongBattleApi.restart(game.value.hash, player.value.token);
     }
 
+    async function continueRound(): Promise<void> {
+        if (game.value === null || player.value === null)
+        {
+            return;
+        }
+
+        state.value = await SongBattleApi.continueRound(game.value.hash, player.value.token);
+    }
+
     async function submitGuess(guess: string) {
         if (game.value === null || player.value === null)
         {
@@ -198,6 +219,7 @@ export function useGameSession() {
         isMaster,
         create,
         join,
+        joinByCode,
         clear,
         restoreFromStorage,
         refreshState,
@@ -208,6 +230,7 @@ export function useGameSession() {
         skip,
         nextSong,
         restart,
+        continueRound,
         submitGuess,
     };
 }

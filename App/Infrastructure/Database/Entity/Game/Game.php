@@ -8,6 +8,7 @@ use App\Infrastructure\Database\Entity\Track\Track;
 use App\Model\Enum\ExternalSourceEnum;
 use App\Model\Enum\GameModeEnum;
 use App\Model\Enum\GameStatusEnum;
+use App\Model\Game\GameRules;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping\Column;
@@ -48,6 +49,35 @@ class Game extends BaseEntity
 
     #[Column(type: 'integer', nullable: false)]
     protected int $current_turn_position = 0;
+
+    /** @var int[] Points awarded for a correct guess at each index of GameRules::STEPS. */
+    #[Column(type: 'json', nullable: false)]
+    protected array $points_per_step = GameRules::DEFAULT_POINTS_PER_STEP;
+
+    #[Column(type: 'boolean', nullable: false)]
+    protected bool $show_leaderboard_to_players = true;
+
+    // Set whenever a round ends (correct guess, or the snippet ran out), until the
+    // master dismisses it — this is the single server-side source of truth for the
+    // Correct/Missed reveal screen, so every viewer (not just whoever guessed) sees the
+    // same outcome, and only the master's continue action can advance past it.
+    #[Column(type: 'boolean', nullable: true)]
+    protected ?bool $pending_reveal_correct = null;
+
+    #[Column(type: 'string', nullable: true, length: 40)]
+    protected ?string $pending_reveal_guesser_name = null;
+
+    #[Column(type: 'float', nullable: true)]
+    protected ?float $pending_reveal_at_seconds = null;
+
+    #[Column(type: 'integer', nullable: true)]
+    protected ?int $pending_reveal_points = null;
+
+    #[Column(type: 'integer', nullable: true)]
+    protected ?int $pending_reveal_streak = null;
+
+    #[Column(type: 'integer', nullable: true)]
+    protected ?int $pending_reveal_score = null;
 
     #[OneToMany(targetEntity: GameTrack::class, mappedBy: 'game')]
     protected Collection $tracks;
@@ -177,9 +207,103 @@ class Game extends BaseEntity
         return $this;
     }
 
+    /**
+     * @return int[]
+     */
+    public function getPointsPerStep(): array
+    {
+        return $this->points_per_step;
+    }
+
+    /**
+     * @param int[] $points_per_step
+     */
+    public function setPointsPerStep(array $points_per_step): Game
+    {
+        $this->points_per_step = $points_per_step;
+        return $this;
+    }
+
+    public function isShowLeaderboardToPlayers(): bool
+    {
+        return $this->show_leaderboard_to_players;
+    }
+
+    public function setShowLeaderboardToPlayers(bool $show_leaderboard_to_players): Game
+    {
+        $this->show_leaderboard_to_players = $show_leaderboard_to_players;
+        return $this;
+    }
+
     public function isPlaying(): bool
     {
         return $this->playback_resumed_at !== null;
+    }
+
+    public function hasPendingReveal(): bool
+    {
+        return $this->pending_reveal_correct !== null;
+    }
+
+    public function getPendingRevealCorrect(): ?bool
+    {
+        return $this->pending_reveal_correct;
+    }
+
+    public function getPendingRevealGuesserName(): ?string
+    {
+        return $this->pending_reveal_guesser_name;
+    }
+
+    public function getPendingRevealAtSeconds(): ?float
+    {
+        return $this->pending_reveal_at_seconds;
+    }
+
+    public function getPendingRevealPoints(): ?int
+    {
+        return $this->pending_reveal_points;
+    }
+
+    public function getPendingRevealStreak(): ?int
+    {
+        return $this->pending_reveal_streak;
+    }
+
+    public function getPendingRevealScore(): ?int
+    {
+        return $this->pending_reveal_score;
+    }
+
+    public function setPendingReveal(
+        bool    $correct,
+        ?string $guesserName = null,
+        ?float  $atSeconds = null,
+        ?int    $points = null,
+        ?int    $streak = null,
+        ?int    $score = null,
+    ): Game
+    {
+        $this->pending_reveal_correct = $correct;
+        $this->pending_reveal_guesser_name = $guesserName;
+        $this->pending_reveal_at_seconds = $atSeconds;
+        $this->pending_reveal_points = $points;
+        $this->pending_reveal_streak = $streak;
+        $this->pending_reveal_score = $score;
+
+        return $this;
+    }
+
+    public function clearPendingReveal(): Game
+    {
+        $this->pending_reveal_correct = null;
+        $this->pending_reveal_guesser_name = null;
+        $this->pending_reveal_at_seconds = null;
+        $this->pending_reveal_points = null;
+        $this->pending_reveal_streak = null;
+        $this->pending_reveal_score = null;
+
+        return $this;
     }
 
     /**

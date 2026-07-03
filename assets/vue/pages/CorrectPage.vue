@@ -2,7 +2,7 @@
     <div v-if="result" style="max-width: 720px; margin: 0 auto;">
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
             <div class="eyebrow">{{ t.correct_eyebrow }}</div>
-            <span class="mono small muted">+{{ result.points }} {{ t.points }}</span>
+            <span v-if="result.points !== null" class="mono small muted">+{{ result.points }} {{ t.points }}</span>
         </div>
 
         <div class="card card-glow" style="position: relative; overflow: hidden; text-align: center; padding: 32px 28px;">
@@ -31,7 +31,9 @@
                 </svg>
             </div>
 
-            <div class="sb-reveal eyebrow" style="justify-content: center; display: inline-flex;">{{ t.correct_sub }}</div>
+            <div class="sb-reveal eyebrow" style="justify-content: center; display: inline-flex;">
+                {{ isOwnGuess ? t.correct_sub : t.correct_sub_other(result.guesserName ?? '?') }}
+            </div>
             <h1 class="sb-reveal display" style="font-size: 40px; margin: 8px 0 4px;">{{ t.correct_title }}</h1>
 
             <div v-if="track" class="sb-reveal-2" style="margin-top: 20px;">
@@ -52,9 +54,10 @@
             <div class="stat"><div class="label">{{ t.total_songs }}</div><div class="value">{{ result.score }}<span class="unit">{{ t.points }}</span></div></div>
         </div>
 
-        <button class="btn btn-primary btn-block mt-12" @click="emit('continue')">
+        <button v-if="session.isMaster.value" class="btn btn-primary btn-block mt-12" @click="emit('continue')">
             {{ t.continue_btn }} →
         </button>
+        <div v-else class="mono small muted center mt-12">{{ t.waiting_master }}</div>
     </div>
 </template>
 
@@ -63,13 +66,13 @@ import { computed } from 'vue';
 import SpotifyCard from '../components/SpotifyCard.vue';
 import SbIcon from '../components/SbIcon.vue';
 import { type Strings } from '../composables/i18n';
-import type { GuessResultDto, TrackInfoDto } from '../api/client';
+import type { RoundResultDto, TrackInfoDto } from '../api/client';
 import type { GameSession } from '../composables/useGameSession';
 import { useFullTrackPlayback } from '../composables/useFullTrackPlayback';
 
 const props = defineProps<{
     t: Strings;
-    result: GuessResultDto | null;
+    result: RoundResultDto | null;
     track: TrackInfoDto | null;
     session: GameSession;
 }>();
@@ -79,6 +82,10 @@ const emit = defineEmits<{
 }>();
 
 const confettiAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+
+const isOwnGuess = computed(() =>
+    props.result?.guesserName !== undefined && props.result?.guesserName === props.session.player.value?.name,
+);
 
 const trackRef = computed(() => props.track);
 const { spotify, canPlayFullTrack, toggleFullTrack } = useFullTrackPlayback(trackRef, props.session);

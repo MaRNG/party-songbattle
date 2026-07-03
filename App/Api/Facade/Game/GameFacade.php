@@ -41,11 +41,21 @@ final readonly class GameFacade
         return $this->gameFilterOptionsProvider->get($filters);
     }
 
-    public function create(GameFilterListDto $filters, GameModeEnum $mode, string $playerName): GameSessionDto
+    /**
+     * @param int[] $pointsPerStep
+     */
+    public function create(
+        GameFilterListDto $filters,
+        GameModeEnum      $mode,
+        string            $playerName,
+        array             $pointsPerStep,
+        bool              $showLeaderboardToPlayers,
+    ): GameSessionDto
     {
         $game = $this->gameFactory->create($filters);
 
         $this->gameSessionManager->configureMode($game, $mode);
+        $this->gameSessionManager->configureScoring($game, $pointsPerStep, $showLeaderboardToPlayers);
         $player = $this->gameSessionManager->join($game, $playerName);
 
         return new GameSessionDto($game, $player);
@@ -54,6 +64,20 @@ final readonly class GameFacade
     public function join(string $hash, string $playerName): GameSessionDto
     {
         $game = $this->getGameByHash($hash);
+        $player = $this->gameSessionManager->join($game, $playerName);
+
+        return new GameSessionDto($game, $player);
+    }
+
+    public function joinByCode(string $code, string $playerName): GameSessionDto
+    {
+        $game = $this->gameRepository->findByInviteCode(strtoupper($code));
+
+        if (!$game instanceof Game)
+        {
+            throw new ClientErrorException('Game not found', 404);
+        }
+
         $player = $this->gameSessionManager->join($game, $playerName);
 
         return new GameSessionDto($game, $player);
@@ -120,6 +144,17 @@ final readonly class GameFacade
 
         $this->assertMaster($player);
         $this->gameSessionManager->restart($game);
+
+        return $this->gameStateProvider->get($game, $player);
+    }
+
+    public function continueRound(string $hash, string $token): GameStateDto
+    {
+        $game = $this->getGameByHash($hash);
+        $player = $this->getPlayerByToken($game, $token);
+
+        $this->assertMaster($player);
+        $this->gameSessionManager->continueRound($game);
 
         return $this->gameStateProvider->get($game, $player);
     }

@@ -40,7 +40,7 @@ final readonly class GameFactory
             $game = new Game();
 
             $game
-                ->setCode(Random::generate(4, 'a-z'))
+                ->setCode(Random::generate(4, 'A-Z'))
                 ->setFilters($this->createFiltersJson($gameFilterList))
                 ->setHash(md5(uniqid($game->getCode(), true)));
 

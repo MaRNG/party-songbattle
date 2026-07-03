@@ -27,6 +27,8 @@ final readonly class GameStateDto
         public ?GameTrackInfoDto  $track,
         public ?GameTrackInfoDto  $previousTrack,
         public ?string            $spotifyTrackId,
+        public ?GameRoundResultDto $roundResult,
+        public bool               $showLeaderboardToPlayers,
         public array              $players,
     )
     {

@@ -10,7 +10,9 @@ use App\Infrastructure\Database\Repository\GameTrackRepository;
 use App\Model\Enum\ExternalSourceEnum;
 use App\Model\Enum\GameModeEnum;
 use App\Model\Enum\GamePlayerRoleEnum;
+use App\Model\Enum\GameStatusEnum;
 use App\Model\Game\Dto\GamePlayerStateDto;
+use App\Model\Game\Dto\GameRoundResultDto;
 use App\Model\Game\Dto\GameStateDto;
 use App\Model\Game\Dto\GameTrackInfoDto;
 
@@ -34,7 +36,10 @@ final readonly class GameStateProvider
             && $isMaster
             && $game->getMode() !== GameModeEnum::SOLO;
 
-        $spotifyTrackId = ($isMaster && $currentTrack !== null)
+        // Tracks are already inflated the instant the game is created, long before the
+        // master presses "Start game" — gate this on status too, or the master's browser
+        // would try to load/play the first track's audio while still sitting in the lobby.
+        $spotifyTrackId = ($isMaster && $currentTrack !== null && $game->getStatus() === GameStatusEnum::PLAYING)
             ? $this->resolveSpotifyTrackId($currentTrack)
             : null;
 
@@ -58,6 +63,17 @@ final readonly class GameStateProvider
             )
             : null;
 
+        $roundResult = $game->hasPendingReveal()
+            ? new GameRoundResultDto(
+                correct    : (bool)$game->getPendingRevealCorrect(),
+                guesserName: $game->getPendingRevealGuesserName(),
+                atSeconds  : $game->getPendingRevealAtSeconds(),
+                points     : $game->getPendingRevealPoints(),
+                streak     : $game->getPendingRevealStreak(),
+                score      : $game->getPendingRevealScore(),
+            )
+            : null;
+
         return new GameStateDto(
             code         : $game->getCode(),
             hash         : $game->getHash(),
@@ -74,6 +90,8 @@ final readonly class GameStateProvider
             track        : $revealTrack ? new GameTrackInfoDto($currentTrack->getTrackName(), $currentTrack->getArtistName()) : null,
             previousTrack: $previousTrack,
             spotifyTrackId: $spotifyTrackId,
+            roundResult  : $roundResult,
+            showLeaderboardToPlayers: $game->isShowLeaderboardToPlayers(),
             players      : array_map(
                 fn(GamePlayer $player) => $this->mapPlayer($player, $viewer),
                 $this->gamePlayerRepository->findByGame($game)

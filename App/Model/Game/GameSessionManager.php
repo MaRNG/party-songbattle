@@ -8,12 +8,10 @@ use App\Infrastructure\Database\Entity\Game\GamePlayer;
 use App\Infrastructure\Database\Entity\Game\GameTrack;
 use App\Infrastructure\Database\Repository\GamePlayerRepository;
 use App\Infrastructure\Database\Repository\GameTrackRepository;
-use App\Model\Enum\ExternalSourceEnum;
 use App\Model\Enum\GameModeEnum;
 use App\Model\Enum\GamePlayerRoleEnum;
 use App\Model\Enum\GameStatusEnum;
 use App\Model\Game\Dto\GameGuessResultDto;
-use App\Model\Game\Dto\GameTrackInfoDto;
 use Doctrine\ORM\EntityManagerInterface;
 use Nette\Utils\Random;
 use Nette\Utils\Strings;
@@ -31,6 +29,20 @@ final readonly class GameSessionManager
     public function configureMode(Game $game, GameModeEnum $mode): Game
     {
         $game->setMode($mode);
+
+        $this->entityManager->flush();
+
+        return $game;
+    }
+
+    /**
+     * @param int[] $pointsPerStep
+     */
+    public function configureScoring(Game $game, array $pointsPerStep, bool $showLeaderboardToPlayers): Game
+    {
+        $game
+            ->setPointsPerStep($pointsPerStep)
+            ->setShowLeaderboardToPlayers($showLeaderboardToPlayers);
 
         $this->entityManager->flush();
 
@@ -131,7 +143,9 @@ final readonly class GameSessionManager
 
     public function nextSong(Game $game): Game
     {
-        return $this->advanceToNextTrack($game);
+        // An explicit master override to jump straight to the next song — unlike a
+        // guess running out or a skip past the last step, there's nothing to reveal.
+        return $this->advanceToNextTrack($game, revealCorrect: null);
     }
 
     public function restart(Game $game): Game
@@ -139,6 +153,15 @@ final readonly class GameSessionManager
         $game
             ->setElapsedSeconds(0.0)
             ->setPlaybackResumedAt(microtime(true));
+
+        $this->entityManager->flush();
+
+        return $game;
+    }
+
+    public function continueRound(Game $game): Game
+    {
+        $game->clearPendingReveal();
 
         $this->entityManager->flush();
 
@@ -155,7 +178,7 @@ final readonly class GameSessionManager
 
         if ($correct)
         {
-            $points = GameRules::pointsForGuess($atSeconds);
+            $points = GameRules::pointsForStep($game->getPointsPerStep(), $game->getCurrentStepIndex());
 
             $player
                 ->setScore($player->getScore() + $points)
@@ -176,7 +199,7 @@ final readonly class GameSessionManager
             // A correct guess ends the round for this track — move on to the next one
             // (or finish the game) instead of just pausing in place, so guessing right
             // is what actually advances the game.
-            $this->advanceToNextTrack($game);
+            $this->advanceToNextTrack($game, revealCorrect: true, guesser: $player, atSeconds: $atSeconds, points: $points);
 
             return new GameGuessResultDto(
                 correct  : true,
@@ -185,7 +208,6 @@ final readonly class GameSessionManager
                 points   : $points,
                 score    : $player->getScore(),
                 streak   : $player->getStreak(),
-                track    : $this->buildTrackInfo($track, $player),
             );
         }
 
@@ -215,7 +237,6 @@ final readonly class GameSessionManager
             points   : 0,
             score    : $player->getScore(),
             streak   : 0,
-            track    : $isLastStep && $track instanceof GameTrack ? $this->buildTrackInfo($track, $player) : null,
         );
     }
 
@@ -231,26 +252,35 @@ final readonly class GameSessionManager
         $this->entityManager->flush();
     }
 
-    private function buildTrackInfo(GameTrack $track, GamePlayer $player): GameTrackInfoDto
-    {
-        $originTrack = $track->getOriginTrack();
-
-        // Only the master's browser holds a live Spotify Connect device, so only they
-        // get the id needed to play the full track back on the reveal screen.
-        $spotifyTrackId = ($player->getRole() === GamePlayerRoleEnum::MASTER && $originTrack->getExternalSource() === ExternalSourceEnum::SPOTIFY)
-            ? $originTrack->getExternalId()
-            : null;
-
-        return new GameTrackInfoDto($track->getTrackName(), $track->getArtistName(), $spotifyTrackId);
-    }
-
-    private function advanceToNextTrack(Game $game): Game
+    private function advanceToNextTrack(
+        Game        $game,
+        ?bool       $revealCorrect = false,
+        ?GamePlayer $guesser = null,
+        ?float      $atSeconds = null,
+        ?int        $points = null,
+    ): Game
     {
         $currentTrack = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
 
         if ($currentTrack instanceof GameTrack)
         {
             $currentTrack->setPlayed(true);
+        }
+
+        if ($revealCorrect === null)
+        {
+            $game->clearPendingReveal();
+        }
+        else
+        {
+            $game->setPendingReveal(
+                correct    : $revealCorrect,
+                guesserName: $guesser?->getName(),
+                atSeconds  : $atSeconds,
+                points     : $points,
+                streak     : $guesser?->getStreak(),
+                score      : $guesser?->getScore(),
+            );
         }
 
         $nextPosition = $game->getCurrentTrackPosition() + 1;

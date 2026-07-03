@@ -27,6 +27,10 @@ export interface Strings {
     f_artist: string;
     f_artist_ph: string;
     songs_in_pool: string;
+    scoring_title: string;
+    scoring_hint: string;
+    show_leaderboard_label: string;
+    show_leaderboard_hint: string;
     create_cta: string;
     room_eyebrow: string;
     room_title: string;
@@ -89,6 +93,7 @@ export interface Strings {
     correct_eyebrow: string;
     correct_title: string;
     correct_sub: string;
+    correct_sub_other: (name: string) => string;
     you_guessed_at: string;
     earned: string;
     streak: string;
@@ -141,6 +146,10 @@ export const SB_I18N: Record<Lang, Strings> = {
         f_artist: 'Interpret',
         f_artist_ph: 'Hledat interpreta…',
         songs_in_pool: 'písniček v poolu',
+        scoring_title: 'Body za úseky',
+        scoring_hint: 'Kolik bodů dostane hráč za uhodnutí v daném úseku skladby.',
+        show_leaderboard_label: 'Zobrazit žebříček hráčům',
+        show_leaderboard_hint: 'Hráči (kromě mastera) uvidí aktuální pořadí a skóre všech ostatních.',
         create_cta: 'Vytvořit hru',
         room_eyebrow: 'ČEKÁRNA',
         room_title: 'Pozvi parťáky',
@@ -203,6 +212,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         correct_eyebrow: 'TREFA',
         correct_title: 'Máš to!',
         correct_sub: 'Uhodl jsi písničku',
+        correct_sub_other: (name: string) => `${name} uhodl(a) písničku`,
         you_guessed_at: 'Tip na',
         earned: 'Získáno',
         streak: 'Šňůra',
@@ -253,6 +263,10 @@ export const SB_I18N: Record<Lang, Strings> = {
         f_artist: 'Artist',
         f_artist_ph: 'Search artist…',
         songs_in_pool: 'songs in pool',
+        scoring_title: 'Points per step',
+        scoring_hint: 'How many points a player earns for guessing right during each snippet step.',
+        show_leaderboard_label: 'Show leaderboard to players',
+        show_leaderboard_hint: 'Players (not just the master) will see everyone\'s live rank and score.',
         create_cta: 'Create game',
         room_eyebrow: 'WAITING ROOM',
         room_title: 'Invite the crew',
@@ -315,6 +329,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         correct_eyebrow: 'GOT IT',
         correct_title: 'Nailed it!',
         correct_sub: 'You guessed the song',
+        correct_sub_other: (name: string) => `${name} guessed the song`,
         you_guessed_at: 'Guessed at',
         earned: 'Earned',
         streak: 'Streak',
@@ -341,3 +356,5 @@ export const SB_I18N: Record<Lang, Strings> = {
 };
 
 export const STEPS = [0.5, 1, 2, 5, 10, 15];
+
+export const DEFAULT_POINTS_PER_STEP = [500, 300, 200, 100, 75, 50];

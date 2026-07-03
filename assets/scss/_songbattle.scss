@@ -310,6 +310,8 @@ h2.section-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; m
     --size: 200px;
     width: var(--size);
     height: var(--size);
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
     border-radius: 50%;
     position: relative;
     background:
@@ -352,6 +354,24 @@ h2.section-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; m
     }
 }
 @keyframes vinyl-spin { to { transform: rotate(360deg); } }
+
+.landing-vinyls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 28px;
+    margin: 20px 0 18px;
+    height: 180px;
+
+    @media (max-width: 480px) {
+        gap: 12px;
+        height: 130px;
+
+        .vinyl { --size: 64px !important; }
+        .vinyl:nth-child(2) { --size: 92px !important; }
+    }
+}
 
 .step-bar {
     display: flex;

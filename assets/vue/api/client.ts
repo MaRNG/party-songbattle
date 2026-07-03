@@ -52,6 +52,15 @@ export interface PlayerStateDto {
     isViewer: boolean;
 }
 
+export interface RoundResultDto {
+    correct: boolean;
+    guesserName: string | null;
+    atSeconds: number | null;
+    points: number | null;
+    streak: number | null;
+    score: number | null;
+}
+
 export interface GameStateDto {
     code: string;
     hash: string;
@@ -68,6 +77,8 @@ export interface GameStateDto {
     track: TrackInfoDto | null;
     previousTrack: TrackInfoDto | null;
     spotifyTrackId: string | null;
+    roundResult: RoundResultDto | null;
+    showLeaderboardToPlayers: boolean;
     players: PlayerStateDto[];
 }
 
@@ -78,7 +89,6 @@ export interface GuessResultDto {
     points: number;
     score: number;
     streak: number;
-    track: TrackInfoDto | null;
 }
 
 class ApiError extends Error {
@@ -134,11 +144,14 @@ export const SongBattleApi = {
     getFilterOptions: (filters: GameFilters) =>
         request<GameFilterOptions>('GET', `/filters${filtersToQuery(filters)}`),
 
-    createGame: (filters: GameFilters, mode: string, name: string) =>
-        request<SessionDto>('POST', '/games', { ...filters, mode, name }),
+    createGame: (filters: GameFilters, mode: string, name: string, pointsPerStep: number[], showLeaderboardToPlayers: boolean) =>
+        request<SessionDto>('POST', '/games', { ...filters, mode, name, pointsPerStep, showLeaderboardToPlayers }),
 
     joinGame: (hash: string, name: string) =>
         request<SessionDto>('POST', `/games/${hash}/join`, { name }),
+
+    joinGameByCode: (code: string, name: string) =>
+        request<SessionDto>('POST', '/games/join', { code, name }),
 
     getState: (hash: string, token: string) =>
         request<GameStateDto>('GET', `/games/${hash}/state`, undefined, token),
@@ -157,6 +170,9 @@ export const SongBattleApi = {
 
     restart: (hash: string, token: string) =>
         request<GameStateDto>('POST', `/games/${hash}/restart`, {}, token),
+
+    continueRound: (hash: string, token: string) =>
+        request<GameStateDto>('POST', `/games/${hash}/continue`, {}, token),
 
     submitGuess: (hash: string, token: string, guess: string) =>
         request<GuessResultDto>('POST', `/games/${hash}/guess`, { guess }, token),

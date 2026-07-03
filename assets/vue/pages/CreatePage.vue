@@ -8,8 +8,8 @@
                 v-for="card in modeCards"
                 :key="card.id"
                 class="mode-card"
-                :class="{ checked: mode === card.id }"
-                @click="mode = card.id"
+                :class="{ checked: mode === card.id, 'is-disabled': card.disabled }"
+                @click="selectMode(card)"
             >
                 <div class="ic"><SbIcon :name="card.icon" /></div>
                 <div>
@@ -28,6 +28,36 @@
             <FilterRow :label="t.f_decade" :items="decadeItems" :selected="decades" @toggle="toggleDecade" />
             <FilterRow :label="t.f_genre" :items="genreItems" :selected="genres" @toggle="toggleGenre" />
             <FilterRow :label="t.f_country" :items="areaItems" :selected="areas" @toggle="toggleArea" />
+        </div>
+
+        <div class="card mt-12">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <SbIcon name="Trophy" /><strong>{{ t.scoring_title }}</strong>
+            </div>
+            <p class="mono small muted" style="margin: 4px 0 14px;">{{ t.scoring_hint }}</p>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div v-for="(step, index) in STEPS" :key="step" style="display: flex; flex-direction: column; gap: 4px; min-width: 76px;">
+                    <span class="mono small muted center">{{ step }}{{ t.seconds }}</span>
+                    <input
+                        v-model.number="pointsPerStep[index]"
+                        type="number"
+                        min="0"
+                        class="input input-mono"
+                        style="width: 100%; text-align: center;"
+                    />
+                </div>
+            </div>
+
+            <div class="divider" />
+
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+                <input v-model="showLeaderboardToPlayers" type="checkbox" style="margin-top: 3px;" />
+                <span>
+                    <strong style="display: block;">{{ t.show_leaderboard_label }}</strong>
+                    <span class="mono small muted">{{ t.show_leaderboard_hint }}</span>
+                </span>
+            </label>
         </div>
 
         <div class="card mt-12 card-glow" style="display: flex; align-items: center; gap: 16px;">
@@ -56,28 +86,40 @@ import FilterRow from '../components/FilterRow.vue';
 import type { FilterRowItem } from '../components/types';
 import SbIcon from '../components/SbIcon.vue';
 import { SongBattleApi, type GameFilterOptions } from '../api/client';
-import type { Strings, Lang } from '../composables/i18n';
+import { STEPS, DEFAULT_POINTS_PER_STEP, type Strings, type Lang } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
 
 const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
 
 const router = useRouter();
 
-const mode = ref<'solo' | 'robin' | 'all'>('all');
+const mode = ref<'solo' | 'robin' | 'all'>('robin');
 const decades = ref<number[]>([]);
 const genres = ref<number[]>([]);
 const areas = ref<string[]>([]);
 const name = ref('');
+const pointsPerStep = ref<number[]>([...DEFAULT_POINTS_PER_STEP]);
+const showLeaderboardToPlayers = ref(true);
 
 const options = ref<GameFilterOptions | null>(null);
 const optionsLoading = ref(false);
 const creating = ref(false);
 
 const modeCards = computed(() => [
-    { id: 'solo' as const, title: props.t.mode_solo_t, desc: props.t.mode_solo_d, icon: 'User' },
-    { id: 'robin' as const, title: props.t.mode_robin_t, desc: props.t.mode_robin_d, icon: 'Users' },
-    { id: 'all' as const, title: props.t.mode_all_t, desc: props.t.mode_all_d, icon: 'Crown' },
+    { id: 'solo' as const, title: props.t.mode_solo_t, desc: props.t.mode_solo_d, icon: 'User', disabled: false },
+    { id: 'robin' as const, title: props.t.mode_robin_t, desc: props.t.mode_robin_d, icon: 'Users', disabled: false },
+    // Not tuned/tested yet — keep selectable in the backend, just block it in the UI for now.
+    { id: 'all' as const, title: props.t.mode_all_t, desc: props.t.mode_all_d, icon: 'Crown', disabled: true },
 ]);
+
+function selectMode(card: { id: 'solo' | 'robin' | 'all'; disabled: boolean }): void {
+    if (card.disabled)
+    {
+        return;
+    }
+
+    mode.value = card.id;
+}
 
 const decadeItems = computed<FilterRowItem[]>(() =>
     (options.value?.decades ?? []).map((decade) => ({ value: decade, label: `${decade}s` })),
@@ -150,7 +192,7 @@ async function create(): Promise<void> {
             years: decades.value,
             genres: genres.value,
             areas: areas.value,
-        }, mode.value, name.value.trim());
+        }, mode.value, name.value.trim(), pointsPerStep.value, showLeaderboardToPlayers.value);
 
         if (mode.value === 'solo')
         {
@@ -169,6 +211,12 @@ async function create(): Promise<void> {
 </script>
 
 <style lang="scss" scoped>
+.mode-card.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .sb-spinner {
     display: inline-block;
     width: 18px;

@@ -33,9 +33,10 @@
             <div style="font-size: 13px; flex: 1;">{{ t.keep_going }}</div>
         </div>
 
-        <button class="btn btn-primary btn-block mt-12" @click="emit('continue')">
+        <button v-if="session.isMaster.value" class="btn btn-primary btn-block mt-12" @click="emit('continue')">
             {{ t.continue_btn }} →
         </button>
+        <div v-else class="mono small muted center mt-12">{{ t.waiting_master }}</div>
     </div>
 </template>
 

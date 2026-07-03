@@ -7,13 +7,19 @@ final class GameRules
     /** Snippet length steps (seconds) the song plays before a skip extends it. */
     public const array STEPS = [0.5, 1.0, 2.0, 5.0, 10.0, 15.0];
 
+    /** Default points awarded for a correct guess at each index of STEPS, master-configurable per game. */
+    public const array DEFAULT_POINTS_PER_STEP = [500, 300, 200, 100, 75, 50];
+
     public const array AVATAR_COLORS = [
         '#ff2a6d', '#5b8cff', '#39ff88', '#ffb84d', '#c842ff', '#00e5ff',
     ];
 
-    public static function pointsForGuess(float $atSeconds): int
+    /**
+     * @param int[] $pointsPerStep
+     */
+    public static function pointsForStep(array $pointsPerStep, int $stepIndex): int
     {
-        return max(50, (int)round(500 / ($atSeconds + 0.3)));
+        return $pointsPerStep[$stepIndex] ?? self::DEFAULT_POINTS_PER_STEP[$stepIndex] ?? 50;
     }
 
     public static function colorForPosition(int $position): string

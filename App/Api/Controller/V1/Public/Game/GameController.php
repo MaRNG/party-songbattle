@@ -19,9 +19,11 @@ use App\Model\Game\Dto\GameFilterListDto;
 use App\Model\Game\Dto\GameFilterOptionsDto;
 use App\Model\Game\Dto\GameGuessResultDto;
 use App\Model\Game\Dto\GamePlayerStateDto;
+use App\Model\Game\Dto\GameRoundResultDto;
 use App\Model\Game\Dto\GameSessionDto;
 use App\Model\Game\Dto\GameStateDto;
 use App\Model\Game\Dto\GameTrackInfoDto;
+use App\Model\Game\GameRules;
 use Psr\Http\Message\ResponseInterface;
 
 #[Path('/songbattle')]
@@ -50,6 +52,8 @@ final class GameController extends BasePublicV1Controller
             $this->createFilterListDto($body),
             $this->parseMode($body['mode'] ?? null),
             $this->parseName($body['name'] ?? null),
+            $this->parsePointsPerStep($body['pointsPerStep'] ?? null),
+            (bool)($body['showLeaderboardToPlayers'] ?? true),
         );
 
         return $response->writeJsonBody($this->serializeSession($session));
@@ -64,6 +68,27 @@ final class GameController extends BasePublicV1Controller
 
         $session = $this->gameFacade->join(
             (string)$request->getParameter('hash'),
+            $this->parseName($body['name'] ?? null),
+        );
+
+        return $response->writeJsonBody($this->serializeSession($session));
+    }
+
+    #[Path('/games/join')]
+    #[Method('POST')]
+    public function joinByCode(ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        $body = (array)$request->getJsonBody();
+
+        $code = trim((string)($body['code'] ?? ''));
+
+        if ($code === '')
+        {
+            throw new ClientErrorException('Invite code is required', 400);
+        }
+
+        $session = $this->gameFacade->joinByCode(
+            $code,
             $this->parseName($body['name'] ?? null),
         );
 
@@ -136,6 +161,16 @@ final class GameController extends BasePublicV1Controller
         return $response->writeJsonBody($this->serializeState($state));
     }
 
+    #[Path('/games/{hash}/continue')]
+    #[Method('POST')]
+    #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
+    public function continueRound(ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        $state = $this->gameFacade->continueRound((string)$request->getParameter('hash'), $this->parseToken($request));
+
+        return $response->writeJsonBody($this->serializeState($state));
+    }
+
     #[Path('/games/{hash}/guess')]
     #[Method('POST')]
     #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
@@ -204,6 +239,19 @@ final class GameController extends BasePublicV1Controller
         }
 
         return $mode;
+    }
+
+    /**
+     * @return int[]
+     */
+    private function parsePointsPerStep(mixed $pointsPerStep): array
+    {
+        if (!is_array($pointsPerStep) || count($pointsPerStep) !== count(GameRules::STEPS))
+        {
+            return GameRules::DEFAULT_POINTS_PER_STEP;
+        }
+
+        return array_values(array_map(static fn (mixed $points): int => max(0, (int)$points), $pointsPerStep));
     }
 
     /**
@@ -285,7 +333,21 @@ final class GameController extends BasePublicV1Controller
             'track'         => $dto->track === null ? null : $this->serializeTrackInfo($dto->track),
             'previousTrack' => $dto->previousTrack === null ? null : $this->serializeTrackInfo($dto->previousTrack),
             'spotifyTrackId' => $dto->spotifyTrackId,
+            'roundResult'   => $dto->roundResult === null ? null : $this->serializeRoundResult($dto->roundResult),
+            'showLeaderboardToPlayers' => $dto->showLeaderboardToPlayers,
             'players'       => array_map($this->serializePlayerState(...), $dto->players),
+        ];
+    }
+
+    private function serializeRoundResult(GameRoundResultDto $dto): array
+    {
+        return [
+            'correct'     => $dto->correct,
+            'guesserName' => $dto->guesserName,
+            'atSeconds'   => $dto->atSeconds,
+            'points'      => $dto->points,
+            'streak'      => $dto->streak,
+            'score'       => $dto->score,
         ];
     }
 
@@ -323,7 +385,6 @@ final class GameController extends BasePublicV1Controller
             'points'    => $dto->points,
             'score'     => $dto->score,
             'streak'    => $dto->streak,
-            'track'     => $dto->track === null ? null : $this->serializeTrackInfo($dto->track),
         ];
     }
 }

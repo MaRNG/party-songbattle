@@ -46,6 +46,25 @@
                         <span v-if="state.isPlaying" class="pill live"><span class="dot" />{{ t.playing }}</span>
                     </div>
                 </div>
+
+                <div v-if="state.showLeaderboardToPlayers" class="card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                        <strong>{{ t.leaderboard }}</strong>
+                        <span class="mono small muted">{{ state.players.length }} {{ t.players_connected }}</span>
+                    </div>
+                    <div v-if="leaderboard.length === 0" class="muted">{{ t.nobody_yet }}</div>
+                    <div
+                        v-for="(player, index) in leaderboard"
+                        :key="player.id"
+                        class="player-row"
+                        :class="{ current: player.isViewer, guessed: index === 0 && player.score > 0 }"
+                    >
+                        <div class="mono small" style="width: 18px; color: var(--dim);">{{ index + 1 }}</div>
+                        <div class="av" :style="{ background: player.color }">{{ player.initials }}</div>
+                        <div class="name">{{ player.name }}</div>
+                        <div class="meta">{{ player.score }} {{ t.points }} · {{ player.guesses }}×</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -68,6 +87,10 @@ const emit = defineEmits<{
 const state = computed(() => props.session.state.value);
 
 const me = computed(() => state.value?.players.find((player) => player.isViewer) ?? null);
+
+const leaderboard = computed(() =>
+    [...(state.value?.players ?? [])].sort((a, b) => b.score - a.score),
+);
 
 const myRank = computed(() => {
     if (!state.value || !me.value)

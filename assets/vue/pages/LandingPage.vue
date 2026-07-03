@@ -4,7 +4,7 @@
         <h1 class="display" style="white-space: pre-line; font-size: 44px; margin: 8px 0 6px;">{{ t.landing_title }}</h1>
         <p class="lead" style="margin: 8px auto 0;">{{ t.landing_lead }}</p>
 
-        <div style="display: flex; justify-content: center; gap: 28px; margin: 20px 0 18px; align-items: center; height: 180px;">
+        <div class="landing-vinyls">
             <Vinyl :size="110" label="?" />
             <Vinyl :size="160" label="?" />
             <Vinyl :size="110" label="?" />
@@ -59,7 +59,7 @@ async function join(): Promise<void> {
 
     try
     {
-        await props.session.join(code.value.trim().toUpperCase(), name.value.trim());
+        await props.session.joinByCode(code.value.trim().toUpperCase(), name.value.trim());
         await router.push({ name: 'game', params: { hash: props.session.game.value!.hash } });
     }
     catch
