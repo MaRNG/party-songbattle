@@ -17,6 +17,7 @@ final readonly class GamePlayerStateDto
         public int                $guesses,
         public bool               $connected,
         public bool               $isViewer,
+        public bool               $isCurrentTurn,
     )
     {
     }

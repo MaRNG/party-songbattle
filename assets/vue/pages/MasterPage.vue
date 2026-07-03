@@ -85,7 +85,12 @@
                     >
                         <div class="mono small" style="width: 18px; color: var(--dim);">{{ index + 1 }}</div>
                         <div class="av" :style="{ background: player.color }">{{ player.initials }}</div>
-                        <div class="name">{{ player.name }}</div>
+                        <div class="name">
+                            {{ player.name }}
+                            <span v-if="player.isCurrentTurn" class="pill live" style="margin-left: 8px;">
+                                <span class="dot" />{{ t.on_turn }}
+                            </span>
+                        </div>
                         <div class="meta">{{ player.score }} {{ t.points }} · {{ player.guesses }}×</div>
                     </div>
                 </div>

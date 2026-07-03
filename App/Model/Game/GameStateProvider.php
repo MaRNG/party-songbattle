@@ -21,6 +21,7 @@ final readonly class GameStateProvider
     public function __construct(
         private GamePlayerRepository $gamePlayerRepository,
         private GameTrackRepository  $gameTrackRepository,
+        private GameSessionManager   $gameSessionManager,
     )
     {
     }
@@ -31,6 +32,10 @@ final readonly class GameStateProvider
         $currentTrack = $tracks[$game->getCurrentTrackPosition()] ?? null;
 
         $isMaster = $viewer->getRole() === GamePlayerRoleEnum::MASTER;
+
+        $currentTurnPlayer = $game->getMode() === GameModeEnum::ROBIN
+            ? $this->gameSessionManager->getCurrentTurnPlayer($game)
+            : null;
 
         $revealTrack = $currentTrack !== null
             && $isMaster
@@ -93,7 +98,7 @@ final readonly class GameStateProvider
             roundResult  : $roundResult,
             showLeaderboardToPlayers: $game->isShowLeaderboardToPlayers(),
             players      : array_map(
-                fn(GamePlayer $player) => $this->mapPlayer($player, $viewer),
+                fn(GamePlayer $player) => $this->mapPlayer($player, $viewer, $currentTurnPlayer),
                 $this->gamePlayerRepository->findByGame($game)
             ),
         );
@@ -108,19 +113,20 @@ final readonly class GameStateProvider
             : null;
     }
 
-    private function mapPlayer(GamePlayer $player, GamePlayer $viewer): GamePlayerStateDto
+    private function mapPlayer(GamePlayer $player, GamePlayer $viewer, ?GamePlayer $currentTurnPlayer): GamePlayerStateDto
     {
         return new GamePlayerStateDto(
-            id       : $player->getId(),
-            name     : $player->getName(),
-            initials : $player->getInitials(),
-            color    : $player->getColor(),
-            role     : $player->getRole(),
-            score    : $player->getScore(),
-            streak   : $player->getStreak(),
-            guesses  : $player->getGuesses(),
-            connected: $player->isConnected(),
-            isViewer : $player->getId() === $viewer->getId(),
+            id           : $player->getId(),
+            name         : $player->getName(),
+            initials     : $player->getInitials(),
+            color        : $player->getColor(),
+            role         : $player->getRole(),
+            score        : $player->getScore(),
+            streak       : $player->getStreak(),
+            guesses      : $player->getGuesses(),
+            connected    : $player->isConnected(),
+            isViewer     : $player->getId() === $viewer->getId(),
+            isCurrentTurn: $currentTurnPlayer instanceof GamePlayer && $currentTurnPlayer->getId() === $player->getId(),
         );
     }
 }

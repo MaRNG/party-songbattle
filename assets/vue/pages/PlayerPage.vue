@@ -27,14 +27,17 @@
                     <div class="av" :style="{ background: me?.color }">{{ me?.initials }}</div>
                     <div style="flex: 1;">
                         <div class="mono uc" style="color: var(--neon-1); font-size: 11px;">{{ t.on_turn }}</div>
-                        <div style="font-weight: 700;">{{ t.your_turn }}</div>
+                        <div style="font-weight: 700;">{{ canGuess ? t.your_turn : t.waiting_turn }}</div>
                     </div>
                     <div class="eq"><span /><span /><span /><span /><span /></div>
                 </div>
 
-                <div>
+                <div v-if="canGuess">
                     <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
                     <GuessInput :t="t" :session="session" @guess="(text) => emit('guess', text)" />
+                </div>
+                <div v-else class="card card-tight muted center">
+                    {{ t.waiting_turn }}
                 </div>
 
                 <div class="card card-tight">
@@ -61,7 +64,12 @@
                     >
                         <div class="mono small" style="width: 18px; color: var(--dim);">{{ index + 1 }}</div>
                         <div class="av" :style="{ background: player.color }">{{ player.initials }}</div>
-                        <div class="name">{{ player.name }}</div>
+                        <div class="name">
+                            {{ player.name }}
+                            <span v-if="player.isCurrentTurn" class="pill live" style="margin-left: 8px;">
+                                <span class="dot" />{{ t.on_turn }}
+                            </span>
+                        </div>
                         <div class="meta">{{ player.score }} {{ t.points }} · {{ player.guesses }}×</div>
                     </div>
                 </div>
@@ -87,6 +95,8 @@ const emit = defineEmits<{
 const state = computed(() => props.session.state.value);
 
 const me = computed(() => state.value?.players.find((player) => player.isViewer) ?? null);
+
+const canGuess = computed(() => state.value?.mode !== 'robin' || me.value?.isCurrentTurn === true);
 
 const leaderboard = computed(() =>
     [...(state.value?.players ?? [])].sort((a, b) => b.score - a.score),

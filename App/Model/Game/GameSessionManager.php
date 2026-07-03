@@ -168,6 +168,44 @@ final readonly class GameSessionManager
         return $game;
     }
 
+    /**
+     * Players eligible to take a turn in round-robin mode — the master never gets a turn,
+     * so waiting on them to answer never blocks the rotation.
+     *
+     * @return array<int,GamePlayer>
+     */
+    public function robinEligiblePlayers(Game $game): array
+    {
+        return array_values(array_filter(
+            $this->gamePlayerRepository->findByGame($game),
+            static fn (GamePlayer $player) => $player->getRole() === GamePlayerRoleEnum::PLAYER,
+        ));
+    }
+
+    public function getCurrentTurnPlayer(Game $game): ?GamePlayer
+    {
+        $players = $this->robinEligiblePlayers($game);
+
+        if (count($players) === 0)
+        {
+            return null;
+        }
+
+        return $players[$game->getCurrentTurnPosition() % count($players)];
+    }
+
+    public function isPlayersTurn(Game $game, GamePlayer $player): bool
+    {
+        if ($game->getMode() !== GameModeEnum::ROBIN)
+        {
+            return true;
+        }
+
+        $currentTurnPlayer = $this->getCurrentTurnPlayer($game);
+
+        return $currentTurnPlayer instanceof GamePlayer && $currentTurnPlayer->getId() === $player->getId();
+    }
+
     public function submitGuess(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
     {
         $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());

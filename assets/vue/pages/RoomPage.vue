@@ -45,6 +45,7 @@
                     <SbIcon name="Disc" /> {{ lang === 'cs' ? 'Připojit Spotify' : 'Connect Spotify' }}
                 </button>
                 <div v-if="spotify.error.value" class="mono small muted center mt-8">{{ spotify.error.value }}</div>
+                <div v-if="startError" class="mono small muted center mt-8">{{ startError }}</div>
 
                 <button v-if="session.isMaster.value" class="btn btn-primary btn-block mt-8" @click="start">
                     <SbIcon name="PlayFill" /> {{ t.start_game }}
@@ -63,15 +64,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import SbIcon from '../components/SbIcon.vue';
 import type { Strings, Lang } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
 import { useSpotifyPlayer } from '../composables/useSpotifyPlayer';
+import { ApiError } from '../api/client';
 
 const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
 
 const spotify = useSpotifyPlayer();
+const startError = ref<string | null>(null);
 
 const code = computed(() => props.session.game.value?.code ?? '');
 const players = computed(() => props.session.state.value?.players ?? []);
@@ -85,13 +88,18 @@ function copyCode(): void {
 
 async function start(): Promise<void> {
     void spotify.activateElement();
+    startError.value = null;
 
     try
     {
         await props.session.startGame();
     }
-    catch
+    catch (error)
     {
+        startError.value = error instanceof ApiError && error.status === 422
+            ? props.t.robin_min_players
+            : null;
+
         return;
     }
 

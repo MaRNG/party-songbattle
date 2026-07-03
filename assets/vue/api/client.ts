@@ -50,6 +50,7 @@ export interface PlayerStateDto {
     guesses: number;
     connected: boolean;
     isViewer: boolean;
+    isCurrentTurn: boolean;
 }
 
 export interface RoundResultDto {

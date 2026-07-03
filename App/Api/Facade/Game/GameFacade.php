@@ -99,6 +99,7 @@ final readonly class GameFacade
         $player = $this->getPlayerByToken($game, $token);
 
         $this->assertMaster($player);
+        $this->assertEnoughPlayersForMode($game);
         $this->gameSessionManager->start($game);
 
         return $this->gameStateProvider->get($game, $player);
@@ -164,6 +165,8 @@ final readonly class GameFacade
         $game = $this->getGameByHash($hash);
         $player = $this->getPlayerByToken($game, $token);
 
+        $this->assertPlayersTurn($game, $player);
+
         return $this->gameSessionManager->submitGuess($game, $player, $guess);
     }
 
@@ -219,6 +222,25 @@ final readonly class GameFacade
         if ($player->getRole() !== GamePlayerRoleEnum::MASTER)
         {
             throw new ClientErrorException('Only the game master can perform this action', 403);
+        }
+    }
+
+    private function assertPlayersTurn(Game $game, GamePlayer $player): void
+    {
+        if (!$this->gameSessionManager->isPlayersTurn($game, $player))
+        {
+            throw new ClientErrorException('It is not your turn to guess', 403);
+        }
+    }
+
+    private function assertEnoughPlayersForMode(Game $game): void
+    {
+        // Round-robin turns rotate only between PLAYER-role members — the master never
+        // gets a turn — so at least 2 of them are needed or the "rotation" is really just
+        // one player waiting on themselves.
+        if ($game->getMode() === GameModeEnum::ROBIN && count($this->gameSessionManager->robinEligiblePlayers($game)) < 2)
+        {
+            throw new ClientErrorException('Round-robin mode needs at least 2 players besides the master', 422);
         }
     }
 }

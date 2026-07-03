@@ -364,6 +364,7 @@ final class GameController extends BasePublicV1Controller
             'guesses'   => $player->guesses,
             'connected' => $player->connected,
             'isViewer'  => $player->isViewer,
+            'isCurrentTurn' => $player->isCurrentTurn,
         ];
     }
 

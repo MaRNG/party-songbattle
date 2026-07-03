@@ -87,6 +87,7 @@ export interface Strings {
     waiting_master: string;
     waiting_turn: string;
     your_turn: string;
+    robin_min_players: string;
     submit: string;
     correct: string;
     incorrect: string;
@@ -206,6 +207,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         waiting_master: 'Čekej na mastera…',
         waiting_turn: 'Čekej, až přijdeš na řadu',
         your_turn: 'Jsi na řadě!',
+        robin_min_players: 'Pro mód „Po jednom“ potřebuješ aspoň 2 hráče (kromě mastera).',
         submit: 'Tipnout',
         correct: 'Správně! 🎉',
         incorrect: 'Bohužel, zkus to dál',
@@ -323,6 +325,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         waiting_master: 'Waiting for master…',
         waiting_turn: 'Wait for your turn',
         your_turn: 'Your turn!',
+        robin_min_players: 'Round-robin mode needs at least 2 players (besides the master).',
         submit: 'Guess',
         correct: 'Correct! 🎉',
         incorrect: 'Nope, keep guessing',
