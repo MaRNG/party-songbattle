@@ -3,8 +3,15 @@
 namespace Deployer;
 
 require 'recipe/composer.php';
+require 'contrib/cachetool.php';
 
 set('application', 'party-songbattle');
+
+// PHP-FPM's opcode cache keeps old compiled code in memory across deploys unless reset —
+// without this, a deploy can silently keep serving stale application code even though the
+// new release is live on disk. Verify this matches the actual php-fpm socket on the server
+// (check with `php -v` / the fpm pool config) if opcache resets stop taking effect.
+set('cachetool', '/run/php/php8.3-fpm.sock');
 set('repository', 'git@github.com:MaRNG/party-songbattle.git');
 set('keep_releases', 5);
 set('git_tty', false);
@@ -44,5 +51,9 @@ task('deploy:migrate', function () {
 after('deploy:vendors', 'deploy:frontend');
 after('deploy:frontend', 'deploy:chown_release');
 after('deploy:chown_release', 'deploy:migrate');
+
+// Reset opcache once the new release is live (after the symlink flip), not before —
+// resetting earlier would just get warmed back up with the old release's code.
+after('deploy:symlink', 'cachetool:clear:opcache');
 
 after('deploy:failed', 'deploy:unlock');
