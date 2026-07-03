@@ -171,7 +171,11 @@ final readonly class GameSessionManager
     public function submitGuess(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
     {
         $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
-        $atSeconds = $game->getCurrentElapsedSeconds();
+        $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
+        // Network/processing lag between the step ending and the guess arriving can push
+        // the raw elapsed time past the step's own length — clamp to it so a guess on the
+        // 0.5s step never gets reported (or scored) as if it took, say, 1.76s.
+        $atSeconds = round(min($game->getCurrentElapsedSeconds(), $stepSeconds), 2);
         $correct = $track instanceof GameTrack && $this->matchesGuess($track, $guess);
 
         $player->setGuesses($player->getGuesses() + 1);
@@ -317,7 +321,15 @@ final readonly class GameSessionManager
             return false;
         }
 
-        return Strings::contains(Strings::lower($track->getTrackName()), $needle)
-            || Strings::contains(Strings::lower($track->getArtistName()), $needle);
+        $trackName = Strings::lower($track->getTrackName());
+        $artistName = Strings::lower($track->getArtistName());
+
+        // Checked both ways: a short partial guess is contained in the full track/artist
+        // name, while picking a suggestion (which fills the input with "track - artist")
+        // instead contains the full track/artist name as a substring of itself.
+        return Strings::contains($trackName, $needle)
+            || Strings::contains($artistName, $needle)
+            || Strings::contains($needle, $trackName)
+            || Strings::contains($needle, $artistName);
     }
 }

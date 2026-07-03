@@ -127,7 +127,7 @@ function moveActive(delta: number): void {
 }
 
 function selectSuggestion(item: TrackInfoDto): void {
-    guess.value = item.trackName;
+    guess.value = `${item.trackName} - ${item.artistName}`;
     closeSuggestions();
 }
 
