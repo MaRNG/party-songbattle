@@ -36,6 +36,7 @@ export interface SessionDto {
 export interface TrackInfoDto {
     trackName: string;
     artistName: string;
+    spotifyTrackId: string | null;
 }
 
 export interface PlayerStateDto {
@@ -72,10 +73,12 @@ export interface GameStateDto {
 
 export interface GuessResultDto {
     correct: boolean;
+    roundOver: boolean;
     atSeconds: number;
     points: number;
     score: number;
     streak: number;
+    track: TrackInfoDto | null;
 }
 
 class ApiError extends Error {

@@ -93,13 +93,12 @@ export interface Strings {
     earned: string;
     streak: string;
     your_rank: string;
-    next_song_soon: string;
+    continue_btn: string;
     missed_eyebrow: string;
     missed_title: string;
     missed_sub: string;
     by: string;
     no_points: string;
-    waiting_next: string;
     keep_going: string;
     results_title: string;
     results_sub: string;
@@ -208,13 +207,12 @@ export const SB_I18N: Record<Lang, Strings> = {
         earned: 'Získáno',
         streak: 'Šňůra',
         your_rank: 'Tvoje místo',
-        next_song_soon: 'Další písnička za chvíli…',
+        continue_btn: 'Pokračovat',
         missed_eyebrow: 'KONEC KOLA',
         missed_title: 'Nikdo neuhodl',
         missed_sub: 'Písnička byla',
         by: 'od',
         no_points: 'Tentokrát bez bodů',
-        waiting_next: 'Čekání na další kolo…',
         keep_going: 'Díl, prr! Další je tvoje.',
         results_title: 'Konec hry',
         results_sub: 'Pořadí a souhrn',
@@ -321,13 +319,12 @@ export const SB_I18N: Record<Lang, Strings> = {
         earned: 'Earned',
         streak: 'Streak',
         your_rank: 'Your rank',
-        next_song_soon: 'Next song coming up…',
+        continue_btn: 'Continue',
         missed_eyebrow: 'ROUND OVER',
         missed_title: 'Nobody got it',
         missed_sub: 'The song was',
         by: 'by',
         no_points: 'No points this round',
-        waiting_next: 'Waiting for next round…',
         keep_going: 'Shake it off — the next one is yours.',
         results_title: 'Game over',
         results_sub: 'Final standings',

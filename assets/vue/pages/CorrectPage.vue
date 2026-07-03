@@ -35,7 +35,13 @@
             <h1 class="sb-reveal display" style="font-size: 40px; margin: 8px 0 4px;">{{ t.correct_title }}</h1>
 
             <div v-if="track" class="sb-reveal-2" style="margin-top: 20px;">
-                <SpotifyCard :track-name="track.trackName" :artist-name="track.artistName" />
+                <SpotifyCard :track-name="track.trackName" :artist-name="track.artistName">
+                    <template v-if="canPlayFullTrack" #controls>
+                        <button class="spfy-btn play" @click="toggleFullTrack">
+                            <SbIcon :name="spotify.isPlaying.value ? 'Pause' : 'PlayFill'" />
+                        </button>
+                    </template>
+                </SpotifyCard>
             </div>
         </div>
 
@@ -46,20 +52,34 @@
             <div class="stat"><div class="label">{{ t.total_songs }}</div><div class="value">{{ result.score }}<span class="unit">{{ t.points }}</span></div></div>
         </div>
 
-        <div class="mono small muted center mt-12">{{ t.next_song_soon }}</div>
+        <button class="btn btn-primary btn-block mt-12" @click="emit('continue')">
+            {{ t.continue_btn }} →
+        </button>
     </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import SpotifyCard from '../components/SpotifyCard.vue';
+import SbIcon from '../components/SbIcon.vue';
 import { type Strings } from '../composables/i18n';
 import type { GuessResultDto, TrackInfoDto } from '../api/client';
+import type { GameSession } from '../composables/useGameSession';
+import { useFullTrackPlayback } from '../composables/useFullTrackPlayback';
 
-defineProps<{
+const props = defineProps<{
     t: Strings;
     result: GuessResultDto | null;
     track: TrackInfoDto | null;
+    session: GameSession;
+}>();
+
+const emit = defineEmits<{
+    (e: 'continue'): void;
 }>();
 
 const confettiAngles = [0, 45, 90, 135, 180, 225, 270, 315];
+
+const trackRef = computed(() => props.track);
+const { spotify, canPlayFullTrack, toggleFullTrack } = useFullTrackPlayback(trackRef, props.session);
 </script>

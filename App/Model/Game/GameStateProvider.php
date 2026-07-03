@@ -38,6 +38,9 @@ final readonly class GameStateProvider
             ? $this->resolveSpotifyTrackId($currentTrack)
             : null;
 
+        $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
+        $elapsedSeconds = min($game->getCurrentElapsedSeconds(), $stepSeconds);
+
         // The previously played track's round has already concluded (correctly guessed,
         // or skipped/advanced past) — unlike the current track, there's no spoiler risk
         // in revealing it, and unlike `track` this is shown to every viewer regardless of
@@ -46,7 +49,13 @@ final readonly class GameStateProvider
         $previousPosition = $game->getCurrentTrackPosition() - 1;
         $previousGameTrack = $previousPosition >= 0 ? ($tracks[$previousPosition] ?? null) : null;
         $previousTrack = $previousGameTrack instanceof GameTrack
-            ? new GameTrackInfoDto($previousGameTrack->getTrackName(), $previousGameTrack->getArtistName())
+            ? new GameTrackInfoDto(
+                $previousGameTrack->getTrackName(),
+                $previousGameTrack->getArtistName(),
+                // Only the master's browser holds a live Spotify Connect device, so only
+                // they get the id needed to play the full track back on the reveal screen.
+                $isMaster ? $this->resolveSpotifyTrackId($previousGameTrack) : null,
+            )
             : null;
 
         return new GameStateDto(
@@ -56,8 +65,8 @@ final readonly class GameStateProvider
             status       : $game->getStatus(),
             viewerRole   : $viewer->getRole(),
             isPlaying    : $game->isPlaying(),
-            elapsedSeconds: $game->getCurrentElapsedSeconds(),
-            stepSeconds  : GameRules::STEPS[$game->getCurrentStepIndex()],
+            elapsedSeconds: $elapsedSeconds,
+            stepSeconds  : $stepSeconds,
             stepIndex    : $game->getCurrentStepIndex(),
             totalSteps   : count(GameRules::STEPS),
             trackPosition: $game->getCurrentTrackPosition(),

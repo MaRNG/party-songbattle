@@ -308,8 +308,9 @@ final class GameController extends BasePublicV1Controller
     private function serializeTrackInfo(GameTrackInfoDto $dto): array
     {
         return [
-            'trackName'  => $dto->trackName,
-            'artistName' => $dto->artistName,
+            'trackName'      => $dto->trackName,
+            'artistName'     => $dto->artistName,
+            'spotifyTrackId' => $dto->spotifyTrackId,
         ];
     }
 
@@ -317,10 +318,12 @@ final class GameController extends BasePublicV1Controller
     {
         return [
             'correct'   => $dto->correct,
+            'roundOver' => $dto->roundOver,
             'atSeconds' => $dto->atSeconds,
             'points'    => $dto->points,
             'score'     => $dto->score,
             'streak'    => $dto->streak,
+            'track'     => $dto->track === null ? null : $this->serializeTrackInfo($dto->track),
         ];
     }
 }

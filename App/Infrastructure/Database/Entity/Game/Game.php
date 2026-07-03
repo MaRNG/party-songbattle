@@ -43,8 +43,8 @@ class Game extends BaseEntity
     #[Column(type: 'float', nullable: false)]
     protected float $elapsed_seconds = 0;
 
-    #[Column(type: 'datetime', nullable: true)]
-    protected ?\DateTimeInterface $playback_resumed_at = null;
+    #[Column(type: 'float', nullable: true)]
+    protected ?float $playback_resumed_at = null;
 
     #[Column(type: 'integer', nullable: false)]
     protected int $current_turn_position = 0;
@@ -155,12 +155,12 @@ class Game extends BaseEntity
         return $this;
     }
 
-    public function getPlaybackResumedAt(): ?\DateTimeInterface
+    public function getPlaybackResumedAt(): ?float
     {
         return $this->playback_resumed_at;
     }
 
-    public function setPlaybackResumedAt(?\DateTimeInterface $playback_resumed_at): Game
+    public function setPlaybackResumedAt(?float $playback_resumed_at): Game
     {
         $this->playback_resumed_at = $playback_resumed_at;
         return $this;
@@ -192,6 +192,6 @@ class Game extends BaseEntity
             return $this->elapsed_seconds;
         }
 
-        return $this->elapsed_seconds + (time() - $this->playback_resumed_at->getTimestamp());
+        return $this->elapsed_seconds + (microtime(true) - $this->playback_resumed_at);
     }
 }

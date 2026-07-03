@@ -34,8 +34,7 @@
 
                 <div>
                     <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
-                    <GuessInput :t="t" :session="session" @guess="onGuess" />
-                    <div v-if="feedback" class="mono small dim" style="margin-top: 6px;">{{ feedback }}</div>
+                    <GuessInput :t="t" :session="session" @guess="(text) => emit('guess', text)" />
                 </div>
 
                 <div class="card card-tight">
@@ -53,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import Vinyl from '../components/Vinyl.vue';
 import GuessInput from '../components/GuessInput.vue';
 import StepBar from '../components/StepBar.vue';
@@ -92,10 +91,4 @@ const fillPercent = computed(() => {
     return Math.min(100, (state.value.elapsedSeconds / stepLimit.value) * 100);
 });
 
-const feedback = ref('');
-
-function onGuess(text: string): void {
-    feedback.value = '';
-    emit('guess', text);
-}
 </script>

@@ -19,7 +19,13 @@
             <h1 class="display" style="font-size: 36px; margin: 8px 0 4px;">{{ t.missed_title }}</h1>
             <p class="lead" style="margin: 6px auto 18px; color: var(--muted);">{{ t.missed_sub }}</p>
 
-            <SpotifyCard v-if="track" :track-name="track.trackName" :artist-name="track.artistName" :prefix="t.by" />
+            <SpotifyCard v-if="track" :track-name="track.trackName" :artist-name="track.artistName" :prefix="t.by">
+                <template v-if="canPlayFullTrack" #controls>
+                    <button class="spfy-btn play" @click="toggleFullTrack">
+                        <SbIcon :name="spotify.isPlaying.value ? 'Pause' : 'PlayFill'" />
+                    </button>
+                </template>
+            </SpotifyCard>
         </div>
 
         <div class="card card-tight mt-12" style="display: flex; align-items: center; gap: 10px;">
@@ -27,17 +33,31 @@
             <div style="font-size: 13px; flex: 1;">{{ t.keep_going }}</div>
         </div>
 
-        <div class="mono small muted center mt-12">{{ t.waiting_next }}</div>
+        <button class="btn btn-primary btn-block mt-12" @click="emit('continue')">
+            {{ t.continue_btn }} →
+        </button>
     </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import SpotifyCard from '../components/SpotifyCard.vue';
+import SbIcon from '../components/SbIcon.vue';
 import { type Strings } from '../composables/i18n';
 import type { TrackInfoDto } from '../api/client';
+import type { GameSession } from '../composables/useGameSession';
+import { useFullTrackPlayback } from '../composables/useFullTrackPlayback';
 
-defineProps<{
+const props = defineProps<{
     t: Strings;
     track: TrackInfoDto | null;
+    session: GameSession;
 }>();
+
+const emit = defineEmits<{
+    (e: 'continue'): void;
+}>();
+
+const trackRef = computed(() => props.track);
+const { spotify, canPlayFullTrack, toggleFullTrack } = useFullTrackPlayback(trackRef, props.session);
 </script>
