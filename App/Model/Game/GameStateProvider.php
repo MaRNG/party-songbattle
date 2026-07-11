@@ -59,8 +59,17 @@ final readonly class GameStateProvider
         // in revealing it, and unlike `track` this is shown to every viewer regardless of
         // role or mode, so solo players and non-master players in robin/all both find out
         // what the song was.
-        $previousPosition = $game->getCurrentTrackPosition() - 1;
-        $previousGameTrack = $previousPosition >= 0 ? ($tracks[$previousPosition] ?? null) : null;
+        //
+        // Normally that's current_track_position - 1, since advanceToNextTrack() moves the
+        // position forward the instant a round ends, before the reveal is even shown. But
+        // when that round finished the whole game, the position is deliberately left
+        // pointing at the last track instead of past the end of the list — falling back to
+        // "-1" there would resolve to the second-to-last track instead. Prefer the exact
+        // position the pending reveal is about whenever one is active.
+        $previousPosition = $game->hasPendingReveal()
+            ? $game->getPendingRevealTrackPosition()
+            : $game->getCurrentTrackPosition() - 1;
+        $previousGameTrack = $previousPosition !== null && $previousPosition >= 0 ? ($tracks[$previousPosition] ?? null) : null;
         $previousTrack = $previousGameTrack instanceof GameTrack
             ? new GameTrackInfoDto(
                 $previousGameTrack->getTrackName(),
@@ -86,13 +95,20 @@ final readonly class GameStateProvider
             ? max(0.0, GameRules::ALL_MODE_REVEAL_SECONDS - (microtime(true) - $game->getPendingRevealStartedAt()))
             : null;
 
-        // One query for every player's attempt count against the current track, instead
-        // of one query per player — only relevant in ALL mode while a track is live.
+        // One query for every player's attempt count, instead of one query per player —
+        // only relevant in ALL mode. `advanceToNextTrack()` already moves
+        // current_track_position forward the instant a round ends, before the reveal is
+        // even shown — so while a reveal is pending, `currentTrack` is actually the
+        // *next*, not-yet-played track. Grouping guesses against it here would always
+        // report zero attempts/not-correct for everyone during the reveal, which is what
+        // made every player look like they'd gotten it right whenever anyone did. Group
+        // against the track the reveal is actually about instead.
+        $trackForAllModeProgress = $game->hasPendingReveal() ? $previousGameTrack : $currentTrack;
+        $isAllModeRoundLive = $game->getMode() === GameModeEnum::ALL && $trackForAllModeProgress instanceof GameTrack;
         // Defaulting to a zero-attempts entry (rather than an empty array) means a player
         // who hasn't guessed yet still reports a full attempt count instead of null.
-        $isAllModeRoundLive = $game->getMode() === GameModeEnum::ALL && $currentTrack instanceof GameTrack;
         $attemptsByPlayerId = $isAllModeRoundLive
-            ? $this->groupGuessesByPlayer($this->gameGuessRepository->findForTrack($game, $currentTrack))
+            ? $this->groupGuessesByPlayer($this->gameGuessRepository->findForTrack($game, $trackForAllModeProgress))
             : [];
 
         return new GameStateDto(
@@ -118,7 +134,7 @@ final readonly class GameStateProvider
                     $player,
                     $viewer,
                     $currentTurnPlayer,
-                    $isAllModeRoundLive ? ($attemptsByPlayerId[$player->getId()] ?? ['attempts' => 0, 'correct' => false]) : null,
+                    $isAllModeRoundLive ? ($attemptsByPlayerId[$player->getId()] ?? ['attempts' => 0, 'correct' => false, 'passed' => false]) : null,
                 ),
                 $this->gamePlayerRepository->findActiveByGame($game)
             ),
@@ -128,7 +144,7 @@ final readonly class GameStateProvider
 
     /**
      * @param array<int,GameGuess> $guesses
-     * @return array<int,array{attempts:int,correct:bool}>
+     * @return array<int,array{attempts:int,correct:bool,passed:bool}>
      */
     private function groupGuessesByPlayer(array $guesses): array
     {
@@ -143,8 +159,18 @@ final readonly class GameStateProvider
                 continue;
             }
 
-            $byPlayer[$playerId] ??= ['attempts' => 0, 'correct' => false];
-            $byPlayer[$playerId]['attempts']++;
+            $byPlayer[$playerId] ??= ['attempts' => 0, 'correct' => false, 'passed' => false];
+
+            if ($guess->isPassed())
+            {
+                // A pass doesn't use up an attempt — it's a separate "gave up" state.
+                $byPlayer[$playerId]['passed'] = true;
+            }
+            else
+            {
+                $byPlayer[$playerId]['attempts']++;
+            }
+
             $byPlayer[$playerId]['correct'] = $byPlayer[$playerId]['correct'] || $guess->isCorrect();
         }
 
@@ -161,7 +187,7 @@ final readonly class GameStateProvider
     }
 
     /**
-     * @param array{attempts:int,correct:bool}|null $allModeProgress
+     * @param array{attempts:int,correct:bool,passed:bool}|null $allModeProgress
      */
     private function mapPlayer(GamePlayer $player, GamePlayer $viewer, ?GamePlayer $currentTurnPlayer, ?array $allModeProgress): GamePlayerStateDto
     {
@@ -179,6 +205,7 @@ final readonly class GameStateProvider
             isCurrentTurn: $currentTurnPlayer instanceof GamePlayer && $currentTurnPlayer->getId() === $player->getId(),
             attemptsRemaining: $allModeProgress !== null ? max(0, GameRules::ALL_MODE_MAX_ATTEMPTS - $allModeProgress['attempts']) : null,
             answeredCorrectly: $allModeProgress !== null ? $allModeProgress['correct'] : null,
+            hasPassed: $allModeProgress !== null ? $allModeProgress['passed'] : null,
         );
     }
 }

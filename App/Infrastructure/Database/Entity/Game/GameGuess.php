@@ -32,6 +32,13 @@ class GameGuess extends BaseEntity
     #[Column(type: 'integer', nullable: false)]
     protected int $points = 0;
 
+    // ALL mode only — a player explicitly gave up on this track ("I don't know") instead
+    // of guessing (right or wrong). Distinct from a wrong guess: it doesn't count toward
+    // the attempt limit and never scores, it just marks the player as done for this round
+    // so the others don't have to wait on someone who was never going to answer.
+    #[Column(type: 'boolean', nullable: false)]
+    protected bool $passed = false;
+
     public function getGame(): ?Game
     {
         return $this->game;
@@ -95,6 +102,17 @@ class GameGuess extends BaseEntity
     public function setPoints(int $points): GameGuess
     {
         $this->points = $points;
+        return $this;
+    }
+
+    public function isPassed(): bool
+    {
+        return $this->passed;
+    }
+
+    public function setPassed(bool $passed): GameGuess
+    {
+        $this->passed = $passed;
         return $this;
     }
 }

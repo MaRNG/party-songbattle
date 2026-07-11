@@ -93,6 +93,7 @@
                                 <span class="dot" />{{ t.on_turn }}
                             </span>
                             <span v-if="state.mode === 'all' && player.answeredCorrectly" class="pill live" style="margin-left: 8px;">✓</span>
+                            <span v-else-if="state.mode === 'all' && player.hasPassed" class="mono small muted" style="margin-left: 8px;">{{ t.pass_btn }}</span>
                             <span v-else-if="state.mode === 'all' && player.attemptsRemaining !== null" class="mono small muted" style="margin-left: 8px;">
                                 {{ t.attempts_remaining(player.attemptsRemaining) }}
                             </span>

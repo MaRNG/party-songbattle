@@ -168,12 +168,37 @@ final readonly class GameFacade
 
         $this->assertPlayersTurn($game, $player);
 
-        if ($game->getMode() === GameModeEnum::ALL && $this->gameSessionManager->hasExhaustedAttempts($game, $player))
+        if ($game->getMode() === GameModeEnum::ALL && $this->gameSessionManager->hasFinishedRound($game, $player))
         {
             throw new ClientErrorException('No more attempts left for this song', 409);
         }
 
         return $this->gameSessionManager->submitGuess($game, $player, $guess);
+    }
+
+    public function passRound(string $hash, string $token): GameStateDto
+    {
+        $game = $this->getGameByHash($hash);
+        $player = $this->getPlayerByToken($game, $token);
+
+        if ($game->getMode() !== GameModeEnum::ALL)
+        {
+            throw new ClientErrorException('Passing is only available in free-for-all mode', 422);
+        }
+
+        if ($player->getRole() !== GamePlayerRoleEnum::PLAYER)
+        {
+            throw new ClientErrorException('Only players take part in a round', 403);
+        }
+
+        if ($this->gameSessionManager->hasFinishedRound($game, $player))
+        {
+            throw new ClientErrorException('You are already done with this round', 409);
+        }
+
+        $this->gameSessionManager->passRound($game, $player);
+
+        return $this->gameStateProvider->get($game, $player);
     }
 
     public function kickPlayer(string $hash, string $token, int $playerId): GameStateDto

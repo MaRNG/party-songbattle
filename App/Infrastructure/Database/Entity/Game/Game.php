@@ -79,6 +79,14 @@ class Game extends BaseEntity
     #[Column(type: 'integer', nullable: true)]
     protected ?int $pending_reveal_score = null;
 
+    // Track position the reveal is actually about. Normally that's current_track_position
+    // minus 1 (advanceToNextTrack() moves the position forward the instant a round ends,
+    // before the reveal is even shown) — except when that round finished the whole game,
+    // where the position is deliberately left pointing at the last track instead of past
+    // the end of the list. Storing it explicitly avoids re-deriving it wrong in that case.
+    #[Column(type: 'integer', nullable: true)]
+    protected ?int $pending_reveal_track_position = null;
+
     // Wall-clock timestamp the pending reveal started — only stamped for ALL mode,
     // where the round auto-advances a fixed number of seconds after the reveal
     // appears instead of waiting for the master to click "Continue".
@@ -281,6 +289,11 @@ class Game extends BaseEntity
         return $this->pending_reveal_score;
     }
 
+    public function getPendingRevealTrackPosition(): ?int
+    {
+        return $this->pending_reveal_track_position;
+    }
+
     public function getPendingRevealStartedAt(): ?float
     {
         return $this->pending_reveal_started_at;
@@ -294,6 +307,7 @@ class Game extends BaseEntity
 
     public function setPendingReveal(
         bool    $correct,
+        int     $trackPosition,
         ?string $guesserName = null,
         ?float  $atSeconds = null,
         ?int    $points = null,
@@ -302,6 +316,7 @@ class Game extends BaseEntity
     ): Game
     {
         $this->pending_reveal_correct = $correct;
+        $this->pending_reveal_track_position = $trackPosition;
         $this->pending_reveal_guesser_name = $guesserName;
         $this->pending_reveal_at_seconds = $atSeconds;
         $this->pending_reveal_points = $points;
@@ -314,6 +329,7 @@ class Game extends BaseEntity
     public function clearPendingReveal(): Game
     {
         $this->pending_reveal_correct = null;
+        $this->pending_reveal_track_position = null;
         $this->pending_reveal_guesser_name = null;
         $this->pending_reveal_at_seconds = null;
         $this->pending_reveal_points = null;

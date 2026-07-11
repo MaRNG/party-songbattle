@@ -434,7 +434,11 @@ final readonly class GameSessionManager
         );
     }
 
-    public function hasExhaustedAttempts(Game $game, GamePlayer $player): bool
+    /**
+     * Whether the player has nothing more to do this round — either they already got it
+     * right, already passed ("I don't know"), or have used up all their attempts.
+     */
+    public function hasFinishedRound(Game $game, GamePlayer $player): bool
     {
         $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
 
@@ -448,15 +452,60 @@ final readonly class GameSessionManager
             static fn (GameGuess $g) => $g->getPlayer()?->getId() === $player->getId(),
         );
 
+        $attemptsUsed = 0;
+
         foreach ($playerGuesses as $playerGuess)
         {
-            if ($playerGuess->isCorrect())
+            if ($playerGuess->isCorrect() || $playerGuess->isPassed())
             {
                 return true;
             }
+
+            $attemptsUsed++;
         }
 
-        return count($playerGuesses) >= GameRules::ALL_MODE_MAX_ATTEMPTS;
+        return $attemptsUsed >= GameRules::ALL_MODE_MAX_ATTEMPTS;
+    }
+
+    /**
+     * ALL mode: an explicit "I don't know" — the player gives up on this track without
+     * spending one of their guess attempts, so the others don't have to wait through 3
+     * wrong guesses just to see them drop out of the round.
+     */
+    public function passRound(Game $game, GamePlayer $player): void
+    {
+        $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
+
+        if (!$track instanceof GameTrack)
+        {
+            return;
+        }
+
+        $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
+        $atSeconds = round(min($game->getCurrentElapsedSeconds(), $stepSeconds), 2);
+
+        $player->setStreak(0);
+
+        $gameGuess = new GameGuess();
+
+        $gameGuess
+            ->setGame($game)
+            ->setGameTrack($track)
+            ->setPlayer($player)
+            ->setCorrect(false)
+            ->setAtSeconds($atSeconds)
+            ->setPoints(0)
+            ->setPassed(true);
+
+        $this->entityManager->persist($gameGuess);
+        $this->entityManager->flush();
+
+        $trackGuesses = $this->gameGuessRepository->findForTrack($game, $track);
+
+        if ($this->isAllModeRoundComplete($game, $trackGuesses))
+        {
+            $this->finishAllModeTrack($game, $trackGuesses);
+        }
     }
 
     /**
@@ -479,8 +528,12 @@ final readonly class GameSessionManager
             );
 
             $hasCorrect = array_filter($playerGuesses, static fn (GameGuess $g) => $g->isCorrect());
+            $hasPassed = array_filter($playerGuesses, static fn (GameGuess $g) => $g->isPassed());
+            // A pass doesn't use up an attempt, so it's excluded from the count below —
+            // only real (right-or-wrong) guesses count toward the attempt limit.
+            $attemptsUsed = array_filter($playerGuesses, static fn (GameGuess $g) => !$g->isPassed());
 
-            if (count($hasCorrect) === 0 && count($playerGuesses) < GameRules::ALL_MODE_MAX_ATTEMPTS)
+            if (count($hasCorrect) === 0 && count($hasPassed) === 0 && count($attemptsUsed) < GameRules::ALL_MODE_MAX_ATTEMPTS)
             {
                 return false;
             }
@@ -533,7 +586,8 @@ final readonly class GameSessionManager
         ?int        $points = null,
     ): Game
     {
-        $currentTrack = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
+        $revealedTrackPosition = $game->getCurrentTrackPosition();
+        $currentTrack = $this->gameTrackRepository->findAtPosition($game, $revealedTrackPosition);
 
         if ($currentTrack instanceof GameTrack)
         {
@@ -547,12 +601,13 @@ final readonly class GameSessionManager
         else
         {
             $game->setPendingReveal(
-                correct    : $revealCorrect,
-                guesserName: $guesser?->getName(),
-                atSeconds  : $atSeconds,
-                points     : $points,
-                streak     : $guesser?->getStreak(),
-                score      : $guesser?->getScore(),
+                correct       : $revealCorrect,
+                trackPosition : $revealedTrackPosition,
+                guesserName   : $guesser?->getName(),
+                atSeconds     : $atSeconds,
+                points        : $points,
+                streak        : $guesser?->getStreak(),
+                score         : $guesser?->getScore(),
             );
 
             // ALL mode auto-advances past the reveal after a fixed pause instead of

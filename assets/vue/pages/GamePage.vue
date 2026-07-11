@@ -77,6 +77,20 @@ const screen = computed(() => {
 
     if (state.roundResult !== null)
     {
+        // In every other mode there's only one guesser per round, so "did anyone get
+        // it" and "did I get it" are the same question — `roundResult.correct` alone is
+        // enough. In ALL mode several players answer independently, and `roundResult`
+        // only ever carries the single fastest correct guess — a player who personally
+        // missed (wrong guess, or ran out of attempts) must still see "missed" even
+        // though someone else won the round. The master has no guess of their own, so
+        // they keep seeing the shared/global outcome.
+        if (state.mode === 'all' && !props.session.isMaster.value)
+        {
+            const me = state.players.find((player) => player.isViewer);
+
+            return me?.answeredCorrectly ? 'correct' : 'missed';
+        }
+
         return state.roundResult.correct ? 'correct' : 'missed';
     }
 

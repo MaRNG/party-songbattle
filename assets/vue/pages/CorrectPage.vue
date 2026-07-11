@@ -47,7 +47,12 @@
             </div>
         </div>
 
-        <div class="row mt-12" style="gap: 12px;">
+        <!-- These numbers (time/points/streak/score) belong to whoever's guess this
+        reveal is about — only render them when that's actually the viewer themselves.
+        Otherwise (spectating master, or in ALL mode a player who also got it right but
+        wasn't the fastest) the header above already says whose win this was; showing
+        someone else's stats under a "you"-labeled row would just be misleading. -->
+        <div v-if="isOwnGuess" class="row mt-12" style="gap: 12px;">
             <div class="stat"><div class="label">{{ t.you_guessed_at }}</div><div class="value" style="color: var(--neon-1);">{{ result.atSeconds }}<span class="unit">s</span></div></div>
             <div class="stat"><div class="label">{{ t.earned }}</div><div class="value">+{{ result.points }}<span class="unit">{{ t.points }}</span></div></div>
             <div class="stat"><div class="label">{{ t.streak }}</div><div class="value">{{ result.streak }}<span class="unit">×</span></div></div>

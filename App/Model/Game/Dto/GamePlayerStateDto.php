@@ -21,6 +21,7 @@ final readonly class GamePlayerStateDto
         // ALL mode only — null for every other mode/status.
         public ?int               $attemptsRemaining = null,
         public ?bool              $answeredCorrectly = null,
+        public ?bool              $hasPassed = null,
     )
     {
     }

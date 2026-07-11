@@ -53,6 +53,7 @@ export interface PlayerStateDto {
     isCurrentTurn: boolean;
     attemptsRemaining: number | null;
     answeredCorrectly: boolean | null;
+    hasPassed: boolean | null;
 }
 
 export interface RoundResultDto {
@@ -180,6 +181,9 @@ export const SongBattleApi = {
 
     submitGuess: (hash: string, token: string, guess: string) =>
         request<GuessResultDto>('POST', `/games/${hash}/guess`, { guess }, token),
+
+    passRound: (hash: string, token: string) =>
+        request<GameStateDto>('POST', `/games/${hash}/pass`, {}, token),
 
     kickPlayer: (hash: string, token: string, playerId: number) =>
         request<GameStateDto>('POST', `/games/${hash}/players/${playerId}/kick`, {}, token),

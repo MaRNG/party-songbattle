@@ -187,6 +187,19 @@ final class GameController extends BasePublicV1Controller
         return $response->writeJsonBody($this->serializeGuessResult($result));
     }
 
+    #[Path('/games/{hash}/pass')]
+    #[Method('POST')]
+    #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
+    public function pass(ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        $state = $this->gameFacade->passRound(
+            (string)$request->getParameter('hash'),
+            $this->parseToken($request),
+        );
+
+        return $response->writeJsonBody($this->serializeState($state));
+    }
+
     #[Path('/games/{hash}/players/{playerId}/kick')]
     #[Method('POST')]
     #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
@@ -401,6 +414,7 @@ final class GameController extends BasePublicV1Controller
             'isCurrentTurn' => $player->isCurrentTurn,
             'attemptsRemaining' => $player->attemptsRemaining,
             'answeredCorrectly' => $player->answeredCorrectly,
+            'hasPassed' => $player->hasPassed,
         ];
     }
 

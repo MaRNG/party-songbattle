@@ -120,6 +120,8 @@ export interface Strings {
     edit_score_prompt: (name: string) => string;
     attempts_remaining: (n: number) => string;
     answered_waiting: string;
+    pass_btn: string;
+    passed_waiting: string;
     auto_advance_hint: (s: number) => string;
     kicked_message: string;
     decades: string[];
@@ -248,6 +250,8 @@ export const SB_I18N: Record<Lang, Strings> = {
         edit_score_prompt: (name: string) => `Nové skóre pro ${name}:`,
         attempts_remaining: (n: number) => `${n}× pokus zbývá`,
         answered_waiting: 'Uhodnuto! Čekej na ostatní…',
+        pass_btn: 'Nevím',
+        passed_waiting: 'Přeskočeno. Čekej na ostatní…',
         auto_advance_hint: (s: number) => `Další písnička za ~${s}s`,
         kicked_message: 'Master tě vyhodil ze hry.',
         decades: ['60. léta', '70. léta', '80. léta', '90. léta', '00.', '10.', '20.'],
@@ -374,6 +378,8 @@ export const SB_I18N: Record<Lang, Strings> = {
         edit_score_prompt: (name: string) => `New score for ${name}:`,
         attempts_remaining: (n: number) => `${n} attempt${n === 1 ? '' : 's'} left`,
         answered_waiting: 'Nailed it! Waiting for others…',
+        pass_btn: "I don't know",
+        passed_waiting: 'Skipped. Waiting for others…',
         auto_advance_hint: (s: number) => `Next song in ~${s}s`,
         kicked_message: 'The master removed you from the game.',
         decades: ['60s', '70s', '80s', '90s', '00s', '10s', '20s'],

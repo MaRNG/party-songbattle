@@ -220,6 +220,15 @@ export function useGameSession() {
         return SongBattleApi.submitGuess(game.value.hash, player.value.token, guess);
     }
 
+    async function passRound(): Promise<void> {
+        if (game.value === null || player.value === null)
+        {
+            return;
+        }
+
+        state.value = await SongBattleApi.passRound(game.value.hash, player.value.token);
+    }
+
     async function kickPlayer(playerId: number): Promise<void> {
         if (game.value === null || player.value === null)
         {
@@ -259,6 +268,7 @@ export function useGameSession() {
         restart,
         continueRound,
         submitGuess,
+        passRound,
         kickPlayer,
         setPlayerScore,
     };

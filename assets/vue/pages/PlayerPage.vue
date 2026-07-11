@@ -24,9 +24,12 @@
                 </span>
             </div>
             <GuessInput :t="t" :session="session" @guess="(text) => emit('guess', text)" />
+            <button v-if="state?.mode === 'all'" class="btn btn-ghost btn-sm mt-8" @click="pass">
+                {{ t.pass_btn }}
+            </button>
         </div>
         <div v-else class="card card-tight muted center mt-12">
-            {{ state?.mode === 'all' && me?.answeredCorrectly ? t.answered_waiting : t.waiting_turn }}
+            {{ waitingText }}
         </div>
 
         <div class="grid-2" style="margin-top: 14px;">
@@ -111,11 +114,34 @@ const canGuess = computed(() => {
 
     if (state.value?.mode === 'all')
     {
-        return me.value?.answeredCorrectly !== true && (me.value?.attemptsRemaining ?? 1) > 0;
+        return me.value?.answeredCorrectly !== true
+            && me.value?.hasPassed !== true
+            && (me.value?.attemptsRemaining ?? 1) > 0;
     }
 
     return true;
 });
+
+const waitingText = computed(() => {
+    if (state.value?.mode === 'all')
+    {
+        if (me.value?.answeredCorrectly)
+        {
+            return props.t.answered_waiting;
+        }
+
+        if (me.value?.hasPassed)
+        {
+            return props.t.passed_waiting;
+        }
+    }
+
+    return props.t.waiting_turn;
+});
+
+async function pass(): Promise<void> {
+    await props.session.passRound().catch(() => undefined);
+}
 
 const leaderboard = computed(() =>
     [...(state.value?.players ?? [])].sort((a, b) => b.score - a.score),
