@@ -61,4 +61,19 @@ final class TrackRepository extends BaseRepository
 
         return $qb->getQuery()->getResult();
     }
+
+    /**
+     * @return iterable<Track>
+     */
+    public function iterateTracksWithoutDownloadedAudio(): iterable
+    {
+        $qb = $this->getBaseQuery();
+
+        $qb->where('u.audio_downloaded = false');
+
+        foreach ($qb->getQuery()->toIterable() as $track)
+        {
+            yield $track;
+        }
+    }
 }

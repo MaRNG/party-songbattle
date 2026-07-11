@@ -71,6 +71,15 @@ class Track extends BaseEntity
     #[Column(nullable: false)]
     protected ?string $track_name_artist_name_hash = null;
 
+    #[Column(nullable: true)]
+    protected ?string $audio_youtube_url = null;
+
+    #[Column(nullable: true)]
+    protected ?string $audio_file_path = null;
+
+    #[Column(nullable: false)]
+    protected bool $audio_downloaded = false;
+
     public function __construct()
     {
         parent::__construct();
@@ -219,6 +228,39 @@ class Track extends BaseEntity
     public function setTrackNameArtistNameHash(?string $track_name_artist_name_hash): Track
     {
         $this->track_name_artist_name_hash = $track_name_artist_name_hash;
+        return $this;
+    }
+
+    public function getAudioYoutubeUrl(): string|null
+    {
+        return $this->audio_youtube_url;
+    }
+
+    public function setAudioYoutubeUrl(?string $audio_youtube_url): Track
+    {
+        $this->audio_youtube_url = $audio_youtube_url;
+        return $this;
+    }
+
+    public function getAudioFilePath(): string|null
+    {
+        return $this->audio_file_path;
+    }
+
+    public function setAudioFilePath(?string $audio_file_path): Track
+    {
+        $this->audio_file_path = $audio_file_path;
+        return $this;
+    }
+
+    public function isAudioDownloaded(): bool
+    {
+        return $this->audio_downloaded;
+    }
+
+    public function setAudioDownloaded(bool $audio_downloaded): Track
+    {
+        $this->audio_downloaded = $audio_downloaded;
         return $this;
     }
 }
