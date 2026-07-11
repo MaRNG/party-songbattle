@@ -18,6 +18,9 @@ final readonly class GamePlayerStateDto
         public bool               $connected,
         public bool               $isViewer,
         public bool               $isCurrentTurn,
+        // ALL mode only — null for every other mode/status.
+        public ?int               $attemptsRemaining = null,
+        public ?bool              $answeredCorrectly = null,
     )
     {
     }

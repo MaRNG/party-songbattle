@@ -5,7 +5,31 @@
             <span class="mono small muted">{{ t.your_rank }}: #{{ myRank }} · {{ me?.score ?? 0 }} {{ t.points }}</span>
         </div>
 
-        <div class="grid-2">
+        <!-- Guessing goes first, above the vinyl/player visual — on mobile that's the
+        first thing on screen instead of something to scroll past on every song. -->
+        <div class="turn-card">
+            <div class="av" :style="{ background: me?.color }">{{ me?.initials }}</div>
+            <div style="flex: 1;">
+                <div class="mono uc" style="color: var(--neon-1); font-size: 11px;">{{ t.on_turn }}</div>
+                <div style="font-weight: 700;">{{ canGuess ? t.your_turn : t.waiting_turn }}</div>
+            </div>
+            <div class="eq"><span /><span /><span /><span /><span /></div>
+        </div>
+
+        <div v-if="canGuess" class="mt-12">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <span class="mono uc muted">{{ t.your_guess }}</span>
+                <span v-if="state?.mode === 'all' && me?.attemptsRemaining !== null && me?.attemptsRemaining !== undefined" class="mono small muted">
+                    {{ t.attempts_remaining(me.attemptsRemaining) }}
+                </span>
+            </div>
+            <GuessInput :t="t" :session="session" @guess="(text) => emit('guess', text)" />
+        </div>
+        <div v-else class="card card-tight muted center mt-12">
+            {{ state?.mode === 'all' && me?.answeredCorrectly ? t.answered_waiting : t.waiting_turn }}
+        </div>
+
+        <div class="grid-2" style="margin-top: 14px;">
             <div class="col" style="align-items: center; justify-content: center; display: flex;">
                 <div style="display: flex; justify-content: center; padding: 14px 0 8px;">
                     <Vinyl :size="240" label="?" :playing="state.isPlaying" />
@@ -23,23 +47,6 @@
             </div>
 
             <div class="col">
-                <div class="turn-card">
-                    <div class="av" :style="{ background: me?.color }">{{ me?.initials }}</div>
-                    <div style="flex: 1;">
-                        <div class="mono uc" style="color: var(--neon-1); font-size: 11px;">{{ t.on_turn }}</div>
-                        <div style="font-weight: 700;">{{ canGuess ? t.your_turn : t.waiting_turn }}</div>
-                    </div>
-                    <div class="eq"><span /><span /><span /><span /><span /></div>
-                </div>
-
-                <div v-if="canGuess">
-                    <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
-                    <GuessInput :t="t" :session="session" @guess="(text) => emit('guess', text)" />
-                </div>
-                <div v-else class="card card-tight muted center">
-                    {{ t.waiting_turn }}
-                </div>
-
                 <div class="card card-tight">
                     <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.streak }}</div>
                     <div style="display: flex; gap: 6px; align-items: center;">
@@ -96,7 +103,19 @@ const state = computed(() => props.session.state.value);
 
 const me = computed(() => state.value?.players.find((player) => player.isViewer) ?? null);
 
-const canGuess = computed(() => state.value?.mode !== 'robin' || me.value?.isCurrentTurn === true);
+const canGuess = computed(() => {
+    if (state.value?.mode === 'robin')
+    {
+        return me.value?.isCurrentTurn === true;
+    }
+
+    if (state.value?.mode === 'all')
+    {
+        return me.value?.answeredCorrectly !== true && (me.value?.attemptsRemaining ?? 1) > 0;
+    }
+
+    return true;
+});
 
 const leaderboard = computed(() =>
     [...(state.value?.players ?? [])].sort((a, b) => b.score - a.score),

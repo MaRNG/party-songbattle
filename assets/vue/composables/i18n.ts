@@ -88,6 +88,7 @@ export interface Strings {
     waiting_turn: string;
     your_turn: string;
     robin_min_players: string;
+    all_min_players: string;
     submit: string;
     correct: string;
     incorrect: string;
@@ -114,6 +115,13 @@ export interface Strings {
     avg_time: string;
     fastest: string;
     best_streak: string;
+    kick_btn: string;
+    kick_confirm: (name: string) => string;
+    edit_score_prompt: (name: string) => string;
+    attempts_remaining: (n: number) => string;
+    answered_waiting: string;
+    auto_advance_hint: (s: number) => string;
+    kicked_message: string;
     decades: string[];
     genres: string[];
     countries: string[];
@@ -208,6 +216,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         waiting_turn: 'Čekej, až přijdeš na řadu',
         your_turn: 'Jsi na řadě!',
         robin_min_players: 'Pro mód „Po jednom“ potřebuješ aspoň 2 hráče (kromě mastera).',
+        all_min_players: 'Pro mód „Všichni najednou“ potřebuješ aspoň 2 hráče (kromě mastera).',
         submit: 'Tipnout',
         correct: 'Správně! 🎉',
         incorrect: 'Bohužel, zkus to dál',
@@ -234,6 +243,13 @@ export const SB_I18N: Record<Lang, Strings> = {
         avg_time: 'Průměrný čas',
         fastest: 'Nejrychlejší tip',
         best_streak: 'Nejlepší šňůra',
+        kick_btn: 'Vyhodit',
+        kick_confirm: (name: string) => `Opravdu vyhodit hráče ${name} ze hry?`,
+        edit_score_prompt: (name: string) => `Nové skóre pro ${name}:`,
+        attempts_remaining: (n: number) => `${n}× pokus zbývá`,
+        answered_waiting: 'Uhodnuto! Čekej na ostatní…',
+        auto_advance_hint: (s: number) => `Další písnička za ~${s}s`,
+        kicked_message: 'Master tě vyhodil ze hry.',
         decades: ['60. léta', '70. léta', '80. léta', '90. léta', '00.', '10.', '20.'],
         genres: ['Pop', 'Rock', 'Hip-Hop', 'Elektronika', 'Synthwave', 'Jazz', 'Country', 'R&B', 'Metal', 'Indie', 'Folk'],
         countries: ['🇨🇿 ČR', '🇺🇸 USA', '🇬🇧 UK', '🇩🇪 DE', '🇫🇷 FR', '🇸🇪 SE', '🇯🇵 JP', '🇮🇹 IT', '🇧🇷 BR'],
@@ -326,6 +342,7 @@ export const SB_I18N: Record<Lang, Strings> = {
         waiting_turn: 'Wait for your turn',
         your_turn: 'Your turn!',
         robin_min_players: 'Round-robin mode needs at least 2 players (besides the master).',
+        all_min_players: 'Free-for-all mode needs at least 2 players (besides the master).',
         submit: 'Guess',
         correct: 'Correct! 🎉',
         incorrect: 'Nope, keep guessing',
@@ -352,6 +369,13 @@ export const SB_I18N: Record<Lang, Strings> = {
         avg_time: 'Avg. guess time',
         fastest: 'Fastest guess',
         best_streak: 'Best streak',
+        kick_btn: 'Kick',
+        kick_confirm: (name: string) => `Remove ${name} from the game?`,
+        edit_score_prompt: (name: string) => `New score for ${name}:`,
+        attempts_remaining: (n: number) => `${n} attempt${n === 1 ? '' : 's'} left`,
+        answered_waiting: 'Nailed it! Waiting for others…',
+        auto_advance_hint: (s: number) => `Next song in ~${s}s`,
+        kicked_message: 'The master removed you from the game.',
         decades: ['60s', '70s', '80s', '90s', '00s', '10s', '20s'],
         genres: ['Pop', 'Rock', 'Hip-Hop', 'Electronic', 'Synthwave', 'Jazz', 'Country', 'R&B', 'Metal', 'Indie', 'Folk'],
         countries: ['🇨🇿 CZ', '🇺🇸 US', '🇬🇧 UK', '🇩🇪 DE', '🇫🇷 FR', '🇸🇪 SE', '🇯🇵 JP', '🇮🇹 IT', '🇧🇷 BR'],

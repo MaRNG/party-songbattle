@@ -33,6 +33,15 @@
                         </span>
                     </div>
                     <span class="meta">{{ player.connected ? t.ready : t.waiting }}</span>
+                    <button
+                        v-if="session.isMaster.value && !player.isViewer"
+                        class="btn btn-ghost btn-sm"
+                        style="margin-left: 8px;"
+                        :title="t.kick_btn"
+                        @click="kickPlayer(player.id, player.name)"
+                    >
+                        <SbIcon name="X" />
+                    </button>
                 </div>
 
                 <div class="divider" />
@@ -79,6 +88,15 @@ const startError = ref<string | null>(null);
 const code = computed(() => props.session.game.value?.code ?? '');
 const players = computed(() => props.session.state.value?.players ?? []);
 
+async function kickPlayer(playerId: number, name: string): Promise<void> {
+    if (!window.confirm(props.t.kick_confirm(name)))
+    {
+        return;
+    }
+
+    await props.session.kickPlayer(playerId).catch(() => undefined);
+}
+
 function copyCode(): void {
     if (code.value !== '' && navigator.clipboard)
     {
@@ -96,9 +114,16 @@ async function start(): Promise<void> {
     }
     catch (error)
     {
-        startError.value = error instanceof ApiError && error.status === 422
-            ? props.t.robin_min_players
-            : null;
+        if (error instanceof ApiError && error.status === 422)
+        {
+            startError.value = props.session.game.value?.mode === 'all'
+                ? props.t.all_min_players
+                : props.t.robin_min_players;
+        }
+        else
+        {
+            startError.value = null;
+        }
 
         return;
     }

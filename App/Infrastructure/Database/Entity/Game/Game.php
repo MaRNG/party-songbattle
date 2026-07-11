@@ -79,6 +79,12 @@ class Game extends BaseEntity
     #[Column(type: 'integer', nullable: true)]
     protected ?int $pending_reveal_score = null;
 
+    // Wall-clock timestamp the pending reveal started — only stamped for ALL mode,
+    // where the round auto-advances a fixed number of seconds after the reveal
+    // appears instead of waiting for the master to click "Continue".
+    #[Column(type: 'float', nullable: true)]
+    protected ?float $pending_reveal_started_at = null;
+
     #[OneToMany(targetEntity: GameTrack::class, mappedBy: 'game')]
     protected Collection $tracks;
 
@@ -275,6 +281,17 @@ class Game extends BaseEntity
         return $this->pending_reveal_score;
     }
 
+    public function getPendingRevealStartedAt(): ?float
+    {
+        return $this->pending_reveal_started_at;
+    }
+
+    public function setPendingRevealStartedAt(?float $pending_reveal_started_at): Game
+    {
+        $this->pending_reveal_started_at = $pending_reveal_started_at;
+        return $this;
+    }
+
     public function setPendingReveal(
         bool    $correct,
         ?string $guesserName = null,
@@ -302,6 +319,7 @@ class Game extends BaseEntity
         $this->pending_reveal_points = null;
         $this->pending_reveal_streak = null;
         $this->pending_reveal_score = null;
+        $this->pending_reveal_started_at = null;
 
         return $this;
     }

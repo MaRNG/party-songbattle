@@ -14,12 +14,29 @@ final class GameRules
         '#ff2a6d', '#5b8cff', '#39ff88', '#ffb84d', '#c842ff', '#00e5ff',
     ];
 
+    /** ALL mode: guess attempts a player gets per song before they're locked out of the round. */
+    public const int ALL_MODE_MAX_ATTEMPTS = 3;
+
+    /** ALL mode: seconds the Correct/Missed reveal stays up before auto-advancing to the next song. */
+    public const float ALL_MODE_REVEAL_SECONDS = 10.0;
+
     /**
      * @param int[] $pointsPerStep
      */
     public static function pointsForStep(array $pointsPerStep, int $stepIndex): int
     {
         return $pointsPerStep[$stepIndex] ?? self::DEFAULT_POINTS_PER_STEP[$stepIndex] ?? 50;
+    }
+
+    /**
+     * ALL mode reuses the same master-configurable point tiers as points-per-step, just
+     * keyed by finishing placement (0 = first correct guess) instead of snippet step.
+     *
+     * @param int[] $pointsPerStep
+     */
+    public static function pointsForPlacement(array $pointsPerStep, int $placementIndex): int
+    {
+        return self::pointsForStep($pointsPerStep, $placementIndex);
     }
 
     public static function colorForPosition(int $position): string

@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue';
-import { SongBattleApi, type GameDto, type GameStateDto, type PlayerDto } from '../api/client';
+import { ApiError, SongBattleApi, type GameDto, type GameStateDto, type PlayerDto } from '../api/client';
 
 const STORAGE_KEY = 'sb_session';
 
@@ -36,6 +36,7 @@ export function useGameSession() {
     const game: Ref<GameDto | null> = ref(null);
     const player: Ref<PlayerDto | null> = ref(null);
     const state: Ref<GameStateDto | null> = ref(null);
+    const kicked = ref(false);
 
     let pollHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -44,6 +45,7 @@ export function useGameSession() {
     function applySession(g: GameDto, p: PlayerDto): void {
         game.value = g;
         player.value = p;
+        kicked.value = false;
         storeSession({ hash: g.hash, token: p.token });
     }
 
@@ -137,7 +139,13 @@ export function useGameSession() {
     function startPolling(intervalMs = 1500): void {
         stopPolling();
         pollHandle = setInterval(() => {
-            refreshState().catch(() => undefined);
+            refreshState().catch((err) => {
+                if (err instanceof ApiError && err.status === 403)
+                {
+                    kicked.value = true;
+                    clear();
+                }
+            });
         }, intervalMs);
     }
 
@@ -212,10 +220,29 @@ export function useGameSession() {
         return SongBattleApi.submitGuess(game.value.hash, player.value.token, guess);
     }
 
+    async function kickPlayer(playerId: number): Promise<void> {
+        if (game.value === null || player.value === null)
+        {
+            return;
+        }
+
+        state.value = await SongBattleApi.kickPlayer(game.value.hash, player.value.token, playerId);
+    }
+
+    async function setPlayerScore(playerId: number, score: number): Promise<void> {
+        if (game.value === null || player.value === null)
+        {
+            return;
+        }
+
+        state.value = await SongBattleApi.setPlayerScore(game.value.hash, player.value.token, playerId, score);
+    }
+
     return {
         game,
         player,
         state,
+        kicked,
         isMaster,
         create,
         join,
@@ -232,6 +259,8 @@ export function useGameSession() {
         restart,
         continueRound,
         submitGuess,
+        kickPlayer,
+        setPlayerScore,
     };
 }
 

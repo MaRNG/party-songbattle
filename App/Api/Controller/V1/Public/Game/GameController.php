@@ -187,6 +187,39 @@ final class GameController extends BasePublicV1Controller
         return $response->writeJsonBody($this->serializeGuessResult($result));
     }
 
+    #[Path('/games/{hash}/players/{playerId}/kick')]
+    #[Method('POST')]
+    #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
+    #[RequestParameter(name: 'playerId', type: 'int', in: 'path')]
+    public function kickPlayer(ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        $state = $this->gameFacade->kickPlayer(
+            (string)$request->getParameter('hash'),
+            $this->parseToken($request),
+            (int)$request->getParameter('playerId'),
+        );
+
+        return $response->writeJsonBody($this->serializeState($state));
+    }
+
+    #[Path('/games/{hash}/players/{playerId}/score')]
+    #[Method('POST')]
+    #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
+    #[RequestParameter(name: 'playerId', type: 'int', in: 'path')]
+    public function setPlayerScore(ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        $body = (array)$request->getJsonBody();
+
+        $state = $this->gameFacade->setPlayerScore(
+            (string)$request->getParameter('hash'),
+            $this->parseToken($request),
+            (int)$request->getParameter('playerId'),
+            (int)($body['score'] ?? 0),
+        );
+
+        return $response->writeJsonBody($this->serializeState($state));
+    }
+
     #[Path('/games/{hash}/suggest')]
     #[Method('GET')]
     #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
@@ -336,6 +369,7 @@ final class GameController extends BasePublicV1Controller
             'roundResult'   => $dto->roundResult === null ? null : $this->serializeRoundResult($dto->roundResult),
             'showLeaderboardToPlayers' => $dto->showLeaderboardToPlayers,
             'players'       => array_map($this->serializePlayerState(...), $dto->players),
+            'revealAutoContinueInSeconds' => $dto->revealAutoContinueInSeconds,
         ];
     }
 
@@ -365,6 +399,8 @@ final class GameController extends BasePublicV1Controller
             'connected' => $player->connected,
             'isViewer'  => $player->isViewer,
             'isCurrentTurn' => $player->isCurrentTurn,
+            'attemptsRemaining' => $player->attemptsRemaining,
+            'answeredCorrectly' => $player->answeredCorrectly,
         ];
     }
 

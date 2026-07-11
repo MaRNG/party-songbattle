@@ -48,6 +48,9 @@ class GamePlayer extends BaseEntity
     #[Column(type: 'datetime', nullable: false)]
     protected \DateTimeInterface $last_seen;
 
+    #[Column(type: 'datetime', nullable: true)]
+    protected ?\DateTimeInterface $kicked_at = null;
+
     public function __construct()
     {
         parent::__construct();
@@ -173,6 +176,17 @@ class GamePlayer extends BaseEntity
     public function setLastSeen(\DateTimeInterface $last_seen): GamePlayer
     {
         $this->last_seen = $last_seen;
+        return $this;
+    }
+
+    public function isKicked(): bool
+    {
+        return $this->kicked_at !== null;
+    }
+
+    public function kick(): GamePlayer
+    {
+        $this->kicked_at = new \DateTime();
         return $this;
     }
 }

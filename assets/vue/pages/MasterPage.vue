@@ -15,6 +15,13 @@
         </button>
         <div v-if="spotify.error.value" class="mono small muted mt-8">{{ spotify.error.value }}</div>
 
+        <!-- Solo mode: master is also the one guessing — keep the input above the
+        player/song visualization so it's the first thing on screen on mobile. -->
+        <div v-if="state.mode === 'solo'" class="mt-12">
+            <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
+            <GuessInput :t="t" :session="session" @guess="submitGuess" />
+        </div>
+
         <div class="grid-2" style="margin-top: 14px;">
             <div class="col">
                 <SpotifyCard
@@ -63,11 +70,6 @@
                         {{ nextStepLabel }}
                     </div>
                 </div>
-
-                <div v-if="state.mode === 'solo'">
-                    <div class="mono uc muted" style="margin-bottom: 8px;">{{ t.your_guess }}</div>
-                    <GuessInput :t="t" :session="session" @guess="submitGuess" />
-                </div>
             </div>
 
             <div class="col">
@@ -90,8 +92,18 @@
                             <span v-if="player.isCurrentTurn" class="pill live" style="margin-left: 8px;">
                                 <span class="dot" />{{ t.on_turn }}
                             </span>
+                            <span v-if="state.mode === 'all' && player.answeredCorrectly" class="pill live" style="margin-left: 8px;">✓</span>
+                            <span v-else-if="state.mode === 'all' && player.attemptsRemaining !== null" class="mono small muted" style="margin-left: 8px;">
+                                {{ t.attempts_remaining(player.attemptsRemaining) }}
+                            </span>
                         </div>
-                        <div class="meta">{{ player.score }} {{ t.points }} · {{ player.guesses }}×</div>
+                        <div class="meta">
+                            {{ player.score }} {{ t.points }} · {{ player.guesses }}×
+                            <button class="btn btn-ghost btn-sm" :title="t.edit_score_prompt(player.name)" @click="editScore(player)">✎</button>
+                            <button v-if="!player.isViewer" class="btn btn-ghost btn-sm" :title="t.kick_btn" @click="kickPlayer(player.id, player.name)">
+                                <SbIcon name="X" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -271,5 +283,32 @@ async function next(): Promise<void> {
 
 function submitGuess(text: string): void {
     emit('guess', text);
+}
+
+async function editScore(player: { id: number; name: string; score: number }): Promise<void> {
+    const input = window.prompt(props.t.edit_score_prompt(player.name), String(player.score));
+
+    if (input === null)
+    {
+        return;
+    }
+
+    const parsed = Number.parseInt(input, 10);
+
+    if (Number.isNaN(parsed))
+    {
+        return;
+    }
+
+    await props.session.setPlayerScore(player.id, parsed).catch(() => undefined);
+}
+
+async function kickPlayer(playerId: number, name: string): Promise<void> {
+    if (!window.confirm(props.t.kick_confirm(name)))
+    {
+        return;
+    }
+
+    await props.session.kickPlayer(playerId).catch(() => undefined);
 }
 </script>

@@ -108,8 +108,7 @@ const creating = ref(false);
 const modeCards = computed(() => [
     { id: 'solo' as const, title: props.t.mode_solo_t, desc: props.t.mode_solo_d, icon: 'User', disabled: false },
     { id: 'robin' as const, title: props.t.mode_robin_t, desc: props.t.mode_robin_d, icon: 'Users', disabled: false },
-    // Not tuned/tested yet — keep selectable in the backend, just block it in the UI for now.
-    { id: 'all' as const, title: props.t.mode_all_t, desc: props.t.mode_all_d, icon: 'Crown', disabled: true },
+    { id: 'all' as const, title: props.t.mode_all_t, desc: props.t.mode_all_d, icon: 'Crown', disabled: false },
 ]);
 
 function selectMode(card: { id: 'solo' | 'robin' | 'all'; disabled: boolean }): void {

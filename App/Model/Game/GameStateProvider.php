@@ -3,8 +3,10 @@
 namespace App\Model\Game;
 
 use App\Infrastructure\Database\Entity\Game\Game;
+use App\Infrastructure\Database\Entity\Game\GameGuess;
 use App\Infrastructure\Database\Entity\Game\GamePlayer;
 use App\Infrastructure\Database\Entity\Game\GameTrack;
+use App\Infrastructure\Database\Repository\GameGuessRepository;
 use App\Infrastructure\Database\Repository\GamePlayerRepository;
 use App\Infrastructure\Database\Repository\GameTrackRepository;
 use App\Model\Enum\ExternalSourceEnum;
@@ -21,6 +23,7 @@ final readonly class GameStateProvider
     public function __construct(
         private GamePlayerRepository $gamePlayerRepository,
         private GameTrackRepository  $gameTrackRepository,
+        private GameGuessRepository  $gameGuessRepository,
         private GameSessionManager   $gameSessionManager,
     )
     {
@@ -79,6 +82,19 @@ final readonly class GameStateProvider
             )
             : null;
 
+        $revealAutoContinueInSeconds = ($roundResult !== null && $game->getMode() === GameModeEnum::ALL && $game->getPendingRevealStartedAt() !== null)
+            ? max(0.0, GameRules::ALL_MODE_REVEAL_SECONDS - (microtime(true) - $game->getPendingRevealStartedAt()))
+            : null;
+
+        // One query for every player's attempt count against the current track, instead
+        // of one query per player — only relevant in ALL mode while a track is live.
+        // Defaulting to a zero-attempts entry (rather than an empty array) means a player
+        // who hasn't guessed yet still reports a full attempt count instead of null.
+        $isAllModeRoundLive = $game->getMode() === GameModeEnum::ALL && $currentTrack instanceof GameTrack;
+        $attemptsByPlayerId = $isAllModeRoundLive
+            ? $this->groupGuessesByPlayer($this->gameGuessRepository->findForTrack($game, $currentTrack))
+            : [];
+
         return new GameStateDto(
             code         : $game->getCode(),
             hash         : $game->getHash(),
@@ -98,10 +114,41 @@ final readonly class GameStateProvider
             roundResult  : $roundResult,
             showLeaderboardToPlayers: $game->isShowLeaderboardToPlayers(),
             players      : array_map(
-                fn(GamePlayer $player) => $this->mapPlayer($player, $viewer, $currentTurnPlayer),
-                $this->gamePlayerRepository->findByGame($game)
+                fn(GamePlayer $player) => $this->mapPlayer(
+                    $player,
+                    $viewer,
+                    $currentTurnPlayer,
+                    $isAllModeRoundLive ? ($attemptsByPlayerId[$player->getId()] ?? ['attempts' => 0, 'correct' => false]) : null,
+                ),
+                $this->gamePlayerRepository->findActiveByGame($game)
             ),
+            revealAutoContinueInSeconds: $revealAutoContinueInSeconds,
         );
+    }
+
+    /**
+     * @param array<int,GameGuess> $guesses
+     * @return array<int,array{attempts:int,correct:bool}>
+     */
+    private function groupGuessesByPlayer(array $guesses): array
+    {
+        $byPlayer = [];
+
+        foreach ($guesses as $guess)
+        {
+            $playerId = $guess->getPlayer()?->getId();
+
+            if ($playerId === null)
+            {
+                continue;
+            }
+
+            $byPlayer[$playerId] ??= ['attempts' => 0, 'correct' => false];
+            $byPlayer[$playerId]['attempts']++;
+            $byPlayer[$playerId]['correct'] = $byPlayer[$playerId]['correct'] || $guess->isCorrect();
+        }
+
+        return $byPlayer;
     }
 
     private function resolveSpotifyTrackId(GameTrack $currentTrack): ?string
@@ -113,7 +160,10 @@ final readonly class GameStateProvider
             : null;
     }
 
-    private function mapPlayer(GamePlayer $player, GamePlayer $viewer, ?GamePlayer $currentTurnPlayer): GamePlayerStateDto
+    /**
+     * @param array{attempts:int,correct:bool}|null $allModeProgress
+     */
+    private function mapPlayer(GamePlayer $player, GamePlayer $viewer, ?GamePlayer $currentTurnPlayer, ?array $allModeProgress): GamePlayerStateDto
     {
         return new GamePlayerStateDto(
             id           : $player->getId(),
@@ -127,6 +177,8 @@ final readonly class GameStateProvider
             connected    : $player->isConnected(),
             isViewer     : $player->getId() === $viewer->getId(),
             isCurrentTurn: $currentTurnPlayer instanceof GamePlayer && $currentTurnPlayer->getId() === $player->getId(),
+            attemptsRemaining: $allModeProgress !== null ? max(0, GameRules::ALL_MODE_MAX_ATTEMPTS - $allModeProgress['attempts']) : null,
+            answeredCorrectly: $allModeProgress !== null ? $allModeProgress['correct'] : null,
         );
     }
 }

@@ -6,6 +6,7 @@ use App\Infrastructure\Database\Entity\Game\Game;
 use App\Infrastructure\Database\Entity\Game\GameGuess;
 use App\Infrastructure\Database\Entity\Game\GamePlayer;
 use App\Infrastructure\Database\Entity\Game\GameTrack;
+use App\Infrastructure\Database\Repository\GameGuessRepository;
 use App\Infrastructure\Database\Repository\GamePlayerRepository;
 use App\Infrastructure\Database\Repository\GameTrackRepository;
 use App\Model\Enum\GameModeEnum;
@@ -21,6 +22,7 @@ final readonly class GameSessionManager
     public function __construct(
         private GamePlayerRepository   $gamePlayerRepository,
         private GameTrackRepository    $gameTrackRepository,
+        private GameGuessRepository    $gameGuessRepository,
         private EntityManagerInterface $entityManager,
     )
     {
@@ -133,10 +135,43 @@ final readonly class GameSessionManager
     {
         if ($game->getCurrentStepIndex() >= count(GameRules::STEPS) - 1)
         {
+            if ($game->getMode() === GameModeEnum::ALL)
+            {
+                $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
+
+                if ($track instanceof GameTrack)
+                {
+                    $this->finishAllModeTrack($game, $this->gameGuessRepository->findForTrack($game, $track));
+
+                    return $game;
+                }
+            }
+
             return $this->advanceToNextTrack($game);
         }
 
         $this->advanceStep($game);
+
+        return $game;
+    }
+
+    public function autoContinueIfExpired(Game $game): Game
+    {
+        if (!$game->hasPendingReveal() || $game->getMode() !== GameModeEnum::ALL)
+        {
+            return $game;
+        }
+
+        $startedAt = $game->getPendingRevealStartedAt();
+
+        if ($startedAt === null || (microtime(true) - $startedAt) < GameRules::ALL_MODE_REVEAL_SECONDS)
+        {
+            return $game;
+        }
+
+        $game->clearPendingReveal();
+
+        $this->entityManager->flush();
 
         return $game;
     }
@@ -177,7 +212,21 @@ final readonly class GameSessionManager
     public function robinEligiblePlayers(Game $game): array
     {
         return array_values(array_filter(
-            $this->gamePlayerRepository->findByGame($game),
+            $this->gamePlayerRepository->findActiveByGame($game),
+            static fn (GamePlayer $player) => $player->getRole() === GamePlayerRoleEnum::PLAYER,
+        ));
+    }
+
+    /**
+     * Players who take part in an ALL-mode round — the master never guesses, same
+     * eligibility rule as round-robin.
+     *
+     * @return array<int,GamePlayer>
+     */
+    public function allModeEligiblePlayers(Game $game): array
+    {
+        return array_values(array_filter(
+            $this->gamePlayerRepository->findActiveByGame($game),
             static fn (GamePlayer $player) => $player->getRole() === GamePlayerRoleEnum::PLAYER,
         ));
     }
@@ -191,7 +240,7 @@ final readonly class GameSessionManager
             // Nobody is eligible for a turn (e.g. a game that started before turns were
             // enforced) — fall back to whoever joined the room first instead of leaving
             // the round stuck with no one able to answer.
-            return $this->gamePlayerRepository->findByGame($game)[0] ?? null;
+            return $this->gamePlayerRepository->findActiveByGame($game)[0] ?? null;
         }
 
         return $players[$game->getCurrentTurnPosition() % count($players)];
@@ -201,6 +250,8 @@ final readonly class GameSessionManager
     {
         if ($game->getMode() !== GameModeEnum::ROBIN)
         {
+            // SOLO and ALL both let anyone guess any time — ALL mode's own attempt
+            // limit (see hasExhaustedAttempts()) is what actually gates it, not turns.
             return true;
         }
 
@@ -209,7 +260,28 @@ final readonly class GameSessionManager
         return $currentTurnPlayer instanceof GamePlayer && $currentTurnPlayer->getId() === $player->getId();
     }
 
+    public function kickPlayer(GamePlayer $target): void
+    {
+        $target->kick();
+
+        $this->entityManager->flush();
+    }
+
+    public function setPlayerScore(GamePlayer $target, int $score): void
+    {
+        $target->setScore($score);
+
+        $this->entityManager->flush();
+    }
+
     public function submitGuess(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
+    {
+        return $game->getMode() === GameModeEnum::ALL
+            ? $this->submitGuessForAll($game, $player, $guess)
+            : $this->submitGuessTurnBased($game, $player, $guess);
+    }
+
+    private function submitGuessTurnBased(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
     {
         $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
         $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
@@ -285,6 +357,162 @@ final readonly class GameSessionManager
         );
     }
 
+    /**
+     * ALL mode: everyone can guess at any time, up to GameRules::ALL_MODE_MAX_ATTEMPTS
+     * attempts per track. Unlike the turn-based modes, a wrong guess never auto-advances
+     * the step here — doing so would let one player's bad guess shrink everyone else's
+     * thinking time, breaking the "everyone races on equal footing" fairness this mode
+     * is for. The snippet only gets longer via the master's manual skip. The round ends
+     * only once every eligible player has either guessed correctly or run out of
+     * attempts (see isAllModeRoundComplete()/finishAllModeTrack()).
+     */
+    private function submitGuessForAll(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
+    {
+        $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
+
+        if (!$track instanceof GameTrack)
+        {
+            // No current track (shouldn't happen mid-PLAYING, but a GameGuess row
+            // requires a non-null track FK) — nothing to score against.
+            return new GameGuessResultDto(correct: false, roundOver: false, atSeconds: 0.0, points: 0, score: $player->getScore(), streak: $player->getStreak());
+        }
+
+        $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
+        $atSeconds = round(min($game->getCurrentElapsedSeconds(), $stepSeconds), 2);
+        $correct = $this->matchesGuess($track, $guess);
+
+        $player->setGuesses($player->getGuesses() + 1);
+
+        $existingGuesses = $this->gameGuessRepository->findForTrack($game, $track);
+
+        $points = 0;
+
+        if ($correct)
+        {
+            $placement = count(array_filter($existingGuesses, static fn (GameGuess $g) => $g->isCorrect()));
+            $points = GameRules::pointsForPlacement($game->getPointsPerStep(), $placement);
+
+            $player
+                ->setScore($player->getScore() + $points)
+                ->setStreak($player->getStreak() + 1);
+        }
+        else
+        {
+            $player->setStreak(0);
+        }
+
+        $gameGuess = new GameGuess();
+
+        $gameGuess
+            ->setGame($game)
+            ->setGameTrack($track)
+            ->setPlayer($player)
+            ->setCorrect($correct)
+            ->setAtSeconds($atSeconds)
+            ->setPoints($points);
+
+        $this->entityManager->persist($gameGuess);
+        $this->entityManager->flush();
+
+        $existingGuesses[] = $gameGuess;
+
+        if ($this->isAllModeRoundComplete($game, $existingGuesses))
+        {
+            $this->finishAllModeTrack($game, $existingGuesses);
+        }
+
+        return new GameGuessResultDto(
+            correct  : $correct,
+            // The shared round-over/reveal state is conveyed via polled game state
+            // (roundResult), not this per-request response — several players can guess
+            // independently before the round as a whole is actually over.
+            roundOver: false,
+            atSeconds: $atSeconds,
+            points   : $points,
+            score    : $player->getScore(),
+            streak   : $player->getStreak(),
+        );
+    }
+
+    public function hasExhaustedAttempts(Game $game, GamePlayer $player): bool
+    {
+        $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
+
+        if (!$track instanceof GameTrack)
+        {
+            return false;
+        }
+
+        $playerGuesses = array_filter(
+            $this->gameGuessRepository->findForTrack($game, $track),
+            static fn (GameGuess $g) => $g->getPlayer()?->getId() === $player->getId(),
+        );
+
+        foreach ($playerGuesses as $playerGuess)
+        {
+            if ($playerGuess->isCorrect())
+            {
+                return true;
+            }
+        }
+
+        return count($playerGuesses) >= GameRules::ALL_MODE_MAX_ATTEMPTS;
+    }
+
+    /**
+     * @param array<int,GameGuess> $trackGuesses
+     */
+    private function isAllModeRoundComplete(Game $game, array $trackGuesses): bool
+    {
+        $eligiblePlayers = $this->allModeEligiblePlayers($game);
+
+        if (count($eligiblePlayers) === 0)
+        {
+            return false;
+        }
+
+        foreach ($eligiblePlayers as $eligiblePlayer)
+        {
+            $playerGuesses = array_filter(
+                $trackGuesses,
+                static fn (GameGuess $g) => $g->getPlayer()?->getId() === $eligiblePlayer->getId(),
+            );
+
+            $hasCorrect = array_filter($playerGuesses, static fn (GameGuess $g) => $g->isCorrect());
+
+            if (count($hasCorrect) === 0 && count($playerGuesses) < GameRules::ALL_MODE_MAX_ATTEMPTS)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array<int,GameGuess> $trackGuesses
+     */
+    private function finishAllModeTrack(Game $game, array $trackGuesses): void
+    {
+        $correctGuesses = array_values(array_filter($trackGuesses, static fn (GameGuess $g) => $g->isCorrect()));
+        $best = $correctGuesses[0] ?? null;
+
+        if ($best instanceof GameGuess)
+        {
+            $this->advanceToNextTrack(
+                $game,
+                revealCorrect: true,
+                guesser      : $best->getPlayer(),
+                atSeconds    : $best->getAtSeconds(),
+                points       : $best->getPoints(),
+            );
+        }
+        else
+        {
+            $this->advanceToNextTrack($game);
+        }
+    }
+
     private function advanceStep(Game $game): void
     {
         $wasPlaying = $game->isPlaying();
@@ -326,6 +554,14 @@ final readonly class GameSessionManager
                 streak     : $guesser?->getStreak(),
                 score      : $guesser?->getScore(),
             );
+
+            // ALL mode auto-advances past the reveal after a fixed pause instead of
+            // waiting for the master to click "Continue" — stamp when that countdown
+            // starts. Other modes leave this null; autoContinueIfExpired() only acts on it.
+            if ($game->getMode() === GameModeEnum::ALL)
+            {
+                $game->setPendingRevealStartedAt(microtime(true));
+            }
         }
 
         $nextPosition = $game->getCurrentTrackPosition() + 1;

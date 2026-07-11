@@ -30,6 +30,8 @@ final readonly class GameStateDto
         public ?GameRoundResultDto $roundResult,
         public bool               $showLeaderboardToPlayers,
         public array              $players,
+        // ALL mode only — seconds left before the reveal auto-advances to the next song.
+        public ?float             $revealAutoContinueInSeconds = null,
     )
     {
     }

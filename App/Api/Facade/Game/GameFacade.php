@@ -89,6 +89,7 @@ final readonly class GameFacade
         $player = $this->getPlayerByToken($game, $token);
 
         $this->gameSessionManager->autoPauseIfExpired($game);
+        $this->gameSessionManager->autoContinueIfExpired($game);
 
         return $this->gameStateProvider->get($game, $player);
     }
@@ -167,7 +168,45 @@ final readonly class GameFacade
 
         $this->assertPlayersTurn($game, $player);
 
+        if ($game->getMode() === GameModeEnum::ALL && $this->gameSessionManager->hasExhaustedAttempts($game, $player))
+        {
+            throw new ClientErrorException('No more attempts left for this song', 409);
+        }
+
         return $this->gameSessionManager->submitGuess($game, $player, $guess);
+    }
+
+    public function kickPlayer(string $hash, string $token, int $playerId): GameStateDto
+    {
+        $game = $this->getGameByHash($hash);
+        $actingPlayer = $this->getPlayerByToken($game, $token);
+
+        $this->assertMaster($actingPlayer);
+
+        $target = $this->getPlayerInGame($game, $playerId);
+
+        if ($target->getRole() === GamePlayerRoleEnum::MASTER)
+        {
+            throw new ClientErrorException('Cannot kick the master', 422);
+        }
+
+        $this->gameSessionManager->kickPlayer($target);
+
+        return $this->gameStateProvider->get($game, $actingPlayer);
+    }
+
+    public function setPlayerScore(string $hash, string $token, int $playerId, int $score): GameStateDto
+    {
+        $game = $this->getGameByHash($hash);
+        $actingPlayer = $this->getPlayerByToken($game, $token);
+
+        $this->assertMaster($actingPlayer);
+
+        $target = $this->getPlayerInGame($game, $playerId);
+
+        $this->gameSessionManager->setPlayerScore($target, $score);
+
+        return $this->gameStateProvider->get($game, $actingPlayer);
     }
 
     /**
@@ -214,6 +253,25 @@ final readonly class GameFacade
             throw new ClientErrorException('Player not found', 404);
         }
 
+        if ($player->isKicked())
+        {
+            // This is what actually ends a kicked player's session — their very next
+            // poll (or any other action) fails here instead of silently continuing.
+            throw new ClientErrorException('You were removed from the game', 403);
+        }
+
+        return $player;
+    }
+
+    private function getPlayerInGame(Game $game, int $playerId): GamePlayer
+    {
+        $player = $this->gamePlayerRepository->find($playerId);
+
+        if (!$player instanceof GamePlayer || $player->getGame()?->getId() !== $game->getId())
+        {
+            throw new ClientErrorException('Player not found', 404);
+        }
+
         return $player;
     }
 
@@ -241,6 +299,13 @@ final readonly class GameFacade
         if ($game->getMode() === GameModeEnum::ROBIN && count($this->gameSessionManager->robinEligiblePlayers($game)) < 2)
         {
             throw new ClientErrorException('Round-robin mode needs at least 2 players besides the master', 422);
+        }
+
+        // ALL mode is a race between PLAYER-role members (the master never guesses either)
+        // — with fewer than 2, there's nobody to race, and a round could never auto-complete.
+        if ($game->getMode() === GameModeEnum::ALL && count($this->gameSessionManager->allModeEligiblePlayers($game)) < 2)
+        {
+            throw new ClientErrorException('Free-for-all mode needs at least 2 players besides the master', 422);
         }
     }
 }

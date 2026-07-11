@@ -51,6 +51,8 @@ export interface PlayerStateDto {
     connected: boolean;
     isViewer: boolean;
     isCurrentTurn: boolean;
+    attemptsRemaining: number | null;
+    answeredCorrectly: boolean | null;
 }
 
 export interface RoundResultDto {
@@ -81,6 +83,7 @@ export interface GameStateDto {
     roundResult: RoundResultDto | null;
     showLeaderboardToPlayers: boolean;
     players: PlayerStateDto[];
+    revealAutoContinueInSeconds: number | null;
 }
 
 export interface GuessResultDto {
@@ -177,6 +180,12 @@ export const SongBattleApi = {
 
     submitGuess: (hash: string, token: string, guess: string) =>
         request<GuessResultDto>('POST', `/games/${hash}/guess`, { guess }, token),
+
+    kickPlayer: (hash: string, token: string, playerId: number) =>
+        request<GameStateDto>('POST', `/games/${hash}/players/${playerId}/kick`, {}, token),
+
+    setPlayerScore: (hash: string, token: string, playerId: number, score: number) =>
+        request<GameStateDto>('POST', `/games/${hash}/players/${playerId}/score`, { score }, token),
 
     suggestTracks: (hash: string, token: string, query: string) =>
         request<{ suggestions: TrackInfoDto[] }>('GET', `/games/${hash}/suggest?q=${encodeURIComponent(query)}`, undefined, token),

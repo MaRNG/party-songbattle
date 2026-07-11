@@ -2,9 +2,8 @@
     <div class="suggest-wrap">
         <input
             v-model="guess"
-            class="input"
+            class="input guess-field"
             :placeholder="t.type_a_song"
-            style="padding-right: 100px; font-size: 16px;"
             @keydown.enter="onEnter"
             @keydown.down.prevent="moveActive(1)"
             @keydown.up.prevent="moveActive(-1)"
@@ -12,12 +11,11 @@
             @blur="onBlur"
         />
         <button
-            class="btn btn-primary btn-sm"
+            class="btn btn-primary btn-sm guess-submit"
             :disabled="!guess.trim()"
-            style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%);"
             @click="submit"
         >
-            <SbIcon name="Send" /> {{ t.submit }}
+            <SbIcon name="Send" /> <span class="submit-label">{{ t.submit }}</span>
         </button>
 
         <ul v-if="suggestions.length > 0" class="suggest-list">
@@ -159,6 +157,21 @@ function submit(): void {
 <style scoped lang="scss">
 .suggest-wrap {
     position: relative;
+    width: 100%;
+    max-width: 100%;
+}
+
+.guess-field {
+    width: 100%;
+    padding-right: 100px;
+    font-size: 16px;
+}
+
+.guess-submit {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .suggest-list {
@@ -177,11 +190,14 @@ function submit(): void {
     -webkit-backdrop-filter: blur(14px);
     max-height: 240px;
     overflow-y: auto;
+    // Safety net so a suggestion with a long, unbreakable word (no spaces — a common
+    // shape for artist/track names) never bleeds past the dropdown's own box and off
+    // the edge of a narrow phone screen.
+    overflow-x: hidden;
 }
 
 .suggest-item {
     display: flex;
-    justify-content: space-between;
     align-items: baseline;
     gap: 10px;
     padding: 8px 10px;
@@ -195,12 +211,37 @@ function submit(): void {
     }
 }
 
+.suggest-track,
+.suggest-artist {
+    // min-width: 0 overrides the flex-item default of min-width: auto — without it, a
+    // long unbroken name refuses to shrink and instead pushes this item (and the
+    // dropdown around it) wider than its container.
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .suggest-track {
     font-weight: 600;
+    flex: 1 1 auto;
 }
 
 .suggest-artist {
     color: var(--muted);
     font-size: 12px;
+    flex: 0 1 auto;
+    max-width: 45%;
+}
+
+@media (max-width: 420px) {
+    .guess-field {
+        padding-right: 76px;
+        font-size: 15px;
+    }
+
+    .guess-submit .submit-label {
+        display: none;
+    }
 }
 </style>

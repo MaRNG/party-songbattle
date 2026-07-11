@@ -57,6 +57,9 @@
         <button v-if="session.isMaster.value" class="btn btn-primary btn-block mt-12" @click="emit('continue')">
             {{ t.continue_btn }} →
         </button>
+        <div v-else-if="session.state.value?.mode === 'all' && autoContinueSeconds !== null" class="mono small muted center mt-12">
+            {{ t.auto_advance_hint(autoContinueSeconds) }}
+        </div>
         <div v-else class="mono small muted center mt-12">{{ t.waiting_master }}</div>
     </div>
 </template>
@@ -86,6 +89,12 @@ const confettiAngles = [0, 45, 90, 135, 180, 225, 270, 315];
 const isOwnGuess = computed(() =>
     props.result?.guesserName !== undefined && props.result?.guesserName === props.session.player.value?.name,
 );
+
+const autoContinueSeconds = computed(() => {
+    const seconds = props.session.state.value?.revealAutoContinueInSeconds;
+
+    return seconds === null || seconds === undefined ? null : Math.ceil(seconds);
+});
 
 const trackRef = computed(() => props.track);
 const { spotify, canPlayFullTrack, toggleFullTrack } = useFullTrackPlayback(trackRef, props.session);

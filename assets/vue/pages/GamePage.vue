@@ -110,8 +110,37 @@ watch(() => props.session.state.value?.spotifyTrackId, (trackId) => {
     void spotify.ensureTrackLoaded(trackId, props.session.state.value?.isPlaying ?? false);
 });
 
+// ALL mode clears the reveal automatically (server-timed), with no click on
+// continueRound() to trigger a resync — `spotifyTrackId` itself already changed the
+// instant the round ended (well before this), so that watcher above won't refire on
+// its own. Catch the reveal->null transition directly instead, mirroring what
+// continueRound() does manually for the master-click case elsewhere.
+watch(() => props.session.state.value?.roundResult, (result, previous) => {
+    if (result !== null || previous === undefined || previous === null || !props.session.isMaster.value)
+    {
+        return;
+    }
+
+    const trackId = props.session.state.value?.spotifyTrackId;
+
+    if (trackId)
+    {
+        void spotify.ensureTrackLoaded(trackId, props.session.state.value?.isPlaying ?? false);
+    }
+});
+
 const flashMessage = ref<string | null>(null);
 let flashTimer: ReturnType<typeof setTimeout> | null = null;
+
+watch(() => props.session.kicked.value, (isKicked) => {
+    if (!isKicked)
+    {
+        return;
+    }
+
+    window.alert(props.t.kicked_message);
+    router.push('/');
+});
 
 function showFlash(message: string): void {
     flashMessage.value = message;
@@ -198,7 +227,10 @@ onMounted(async () => {
     }
 
     await props.session.refreshState();
-    props.session.startPolling();
+
+    // ALL mode's timing is authoritative server-side either way (see GameSessionManager),
+    // so tighter client polling buys nothing there — a slightly slower interval is fine.
+    props.session.startPolling(props.session.state.value?.mode === 'all' ? 2000 : 1500);
 });
 
 onBeforeUnmount(() => {
