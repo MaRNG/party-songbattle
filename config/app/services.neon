@@ -47,7 +47,7 @@ services:
 
     # Track audio download
     # Replace with a real implementation of TrackAudioDownloaderInterface once ready.
-    - App\Model\Track\Audio\NotImplementedTrackAudioDownloader
+    - App\Model\Track\Audio\YouTubeTrackAudioDownloader
 
     # Commands
     - App\Commands\Spotify\SpotifyConnectWizardCommand(
