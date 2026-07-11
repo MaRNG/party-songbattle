@@ -47,7 +47,7 @@ services:
 
     # Track audio download
     # Replace with a real implementation of TrackAudioDownloaderInterface once ready.
-    - App\Model\Track\Audio\TrackAudioDownloaderInterface: App\Model\Track\Audio\NotImplementedTrackAudioDownloader
+    - App\Model\Track\Audio\NotImplementedTrackAudioDownloader
 
     # Commands
     - App\Commands\Spotify\SpotifyConnectWizardCommand(
@@ -61,7 +61,7 @@ services:
     - App\Commands\Import\MusicBrainzTrackTagsImportCommand
     - App\Commands\Import\ConsolidateTrackGenresCommand
     - App\Commands\Track\GenerateTrackNameArtistNameHashesCommand
-    - App\Commands\Track\DownloadTrackAudioCommand(%wwwDir%/files/mp3)
+    - App\Commands\Track\DownloadTrackAudioCommand(targetDirectory: %wwwDir%/files/mp3)
 
     # Routing ================
     - App\Model\Router\RouterFactory

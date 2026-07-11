@@ -18,9 +18,9 @@ final class DownloadTrackAudioCommand extends Command
 {
     public function __construct(
         private readonly TrackRepository               $trackRepository,
-        private readonly EntityManagerInterface         $entityManager,
-        private readonly TrackAudioDownloaderInterface  $trackAudioDownloader,
-        private readonly string                         $targetDirectory,
+        private readonly EntityManagerInterface        $entityManager,
+        private readonly TrackAudioDownloaderInterface $trackAudioDownloader,
+        private readonly string                        $targetDirectory,
     )
     {
         parent::__construct();
@@ -45,7 +45,7 @@ final class DownloadTrackAudioCommand extends Command
         }
 
         $limitOption = $input->getOption('limit');
-        $limit = $limitOption !== null ? (int) $limitOption : null;
+        $limit = $limitOption !== null ? (int)$limitOption : null;
 
         CliWriter::writeNl('Start downloading track audio...');
 
@@ -64,18 +64,22 @@ final class DownloadTrackAudioCommand extends Command
 
             $total++;
 
-            $artistNames = implode(', ', array_map(
-                static fn ($artist) => $artist->getName(),
+            $artistNames = implode(
+                ', ', array_map(
+                static fn($artist) => $artist->getName(),
                 $track->getArtists()->toArray()
-            ));
+            )
+            );
 
-            CliWriter::writeNl(sprintf(
-                '[#%d] Processing track #%d: %s - %s',
-                $total,
-                $track->getId(),
-                $artistNames,
-                $track->getName()
-            ));
+            CliWriter::writeNl(
+                sprintf(
+                    '[#%d] Processing track #%d: %s - %s',
+                    $total,
+                    $track->getId(),
+                    $artistNames,
+                    $track->getName()
+                )
+            );
 
             try
             {
@@ -98,21 +102,22 @@ final class DownloadTrackAudioCommand extends Command
 
                 CliWriter::writeNl(sprintf('[#%d] Downloaded and saved to "%s".', $total, $result->filePath));
                 $downloaded++;
-            }
-            catch (\Throwable $e)
+            } catch (\Throwable $e)
             {
                 CliWriter::writeNl(sprintf('[#%d] Failed: %s', $total, $e->getMessage()));
                 $failed++;
             }
         }
 
-        CliWriter::writeNl(sprintf(
-            'Done. Processed: %d, downloaded: %d, skipped: %d, failed: %d.',
-            $total,
-            $downloaded,
-            $skipped,
-            $failed
-        ));
+        CliWriter::writeNl(
+            sprintf(
+                'Done. Processed: %d, downloaded: %d, skipped: %d, failed: %d.',
+                $total,
+                $downloaded,
+                $skipped,
+                $failed
+            )
+        );
 
         return self::SUCCESS;
     }
