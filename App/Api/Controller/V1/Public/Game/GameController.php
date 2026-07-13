@@ -24,6 +24,8 @@ use App\Model\Game\Dto\GameSessionDto;
 use App\Model\Game\Dto\GameStateDto;
 use App\Model\Game\Dto\GameTrackInfoDto;
 use App\Model\Game\GameRules;
+use GuzzleHttp\Psr7\LimitStream;
+use GuzzleHttp\Psr7\Stream;
 use Psr\Http\Message\ResponseInterface;
 
 #[Path('/songbattle')]
@@ -251,6 +253,90 @@ final class GameController extends BasePublicV1Controller
         ]);
     }
 
+    #[Path('/games/{hash}/tracks/{gameTrackId}/audio')]
+    #[Method('GET')]
+    #[RequestParameter(name: 'hash', type: 'string', in: 'path')]
+    #[RequestParameter(name: 'gameTrackId', type: 'int', in: 'path')]
+    public function trackAudio(ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        // A plain <audio src="..."> request is issued by the browser's media engine, which
+        // cannot attach the X-Player-Token header used everywhere else — the token travels
+        // as a query parameter here instead, same trade-off any signed-media-URL scheme makes.
+        $path = $this->gameFacade->getTrackAudioPath(
+            (string)$request->getParameter('hash'),
+            $this->parseAudioToken($request),
+            (int)$request->getParameter('gameTrackId'),
+        );
+
+        return $this->streamAudioFile($path, $request, $response);
+    }
+
+    private function streamAudioFile(string $path, ApiRequest $request, ApiResponse $response): ResponseInterface
+    {
+        $size = filesize($path);
+        $rangeHeader = $request->getHeaderLine('Range');
+
+        $start = 0;
+        $end = $size - 1;
+        $status = ApiResponse::S200_OK;
+
+        if ($rangeHeader !== '' && preg_match('/bytes=(\d*)-(\d*)/', $rangeHeader, $matches) === 1 && $size > 0)
+        {
+            if ($matches[1] !== '')
+            {
+                $start = (int)$matches[1];
+            }
+
+            if ($matches[2] !== '')
+            {
+                $end = (int)$matches[2];
+            }
+
+            $end = min($end, $size - 1);
+
+            if ($start > $end || $start >= $size)
+            {
+                return $response
+                    ->withStatus(ApiResponse::S416_REQUESTED_RANGE_NOT_SATISFIABLE)
+                    ->withHeader('Content-Range', "bytes */{$size}");
+            }
+
+            $status = ApiResponse::S206_PARTIAL_CONTENT;
+        }
+
+        $length = $end - $start + 1;
+
+        $handle = fopen($path, 'rb');
+        $stream = new LimitStream(new Stream($handle), $length, $start);
+
+        $response = $response
+            ->withStatus($status)
+            ->withHeader('Content-Type', 'audio/mpeg')
+            ->withHeader('Accept-Ranges', 'bytes')
+            ->withHeader('Content-Length', (string)$length)
+            ->withHeader('Cache-Control', 'private, no-store')
+            ->withBody($stream);
+
+        if ($status === ApiResponse::S206_PARTIAL_CONTENT)
+        {
+            $response = $response->withHeader('Content-Range', "bytes {$start}-{$end}/{$size}");
+        }
+
+        return $response;
+    }
+
+    private function parseAudioToken(ApiRequest $request): string
+    {
+        $token = (string)($request->getQueryParams()['token'] ?? '');
+
+        if ($token === '')
+        {
+            throw new ClientErrorException('Missing token query parameter', 401);
+        }
+
+        return $token;
+    }
+
     private function parseToken(ApiRequest $request): string
     {
         $token = $request->getHeaderLine('X-Player-Token');
@@ -378,7 +464,7 @@ final class GameController extends BasePublicV1Controller
             'totalTracks'   => $dto->totalTracks,
             'track'         => $dto->track === null ? null : $this->serializeTrackInfo($dto->track),
             'previousTrack' => $dto->previousTrack === null ? null : $this->serializeTrackInfo($dto->previousTrack),
-            'spotifyTrackId' => $dto->spotifyTrackId,
+            'audioTrackId'  => $dto->audioTrackId,
             'roundResult'   => $dto->roundResult === null ? null : $this->serializeRoundResult($dto->roundResult),
             'showLeaderboardToPlayers' => $dto->showLeaderboardToPlayers,
             'players'       => array_map($this->serializePlayerState(...), $dto->players),
@@ -423,7 +509,7 @@ final class GameController extends BasePublicV1Controller
         return [
             'trackName'      => $dto->trackName,
             'artistName'     => $dto->artistName,
-            'spotifyTrackId' => $dto->spotifyTrackId,
+            'audioTrackId'   => $dto->audioTrackId,
         ];
     }
 

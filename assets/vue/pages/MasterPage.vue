@@ -6,14 +6,7 @@
             <span class="pill"><SbIcon name="Music" />{{ t.playing }}</span>
         </div>
 
-        <button
-            v-if="!spotify.isAuthenticated.value"
-            class="btn btn-ghost btn-sm mt-8"
-            @click="spotify.connect()"
-        >
-            <SbIcon name="Disc" /> Connect Spotify
-        </button>
-        <div v-if="spotify.error.value" class="mono small muted mt-8">{{ spotify.error.value }}</div>
+        <div v-if="playback.error.value" class="mono small muted mt-8">{{ playback.error.value }}</div>
 
         <!-- Solo mode: master is also the one guessing — keep the input above the
         player/song visualization so it's the first thing on screen on mobile. -->
@@ -24,7 +17,7 @@
 
         <div class="grid-2" style="margin-top: 14px;">
             <div class="col">
-                <SpotifyCard
+                <TrackCard
                     v-if="state.track"
                     :track-name="state.track.trackName"
                     :artist-name="state.track.artistName"
@@ -33,13 +26,13 @@
                         <span class="tag">{{ t.song_n_of_n(state.trackPosition + 1, state.totalTracks) }}</span>
                     </template>
                     <template #controls>
-                        <button class="spfy-btn" @click="restart"><SbIcon name="Restart" /></button>
-                        <button class="spfy-btn" @click="skip"><SbIcon name="SkipForward" /></button>
-                        <button class="spfy-btn play" @click="togglePlaying">
+                        <button class="track-btn" @click="restart"><SbIcon name="Restart" /></button>
+                        <button class="track-btn" @click="skip"><SbIcon name="SkipForward" /></button>
+                        <button class="track-btn play" @click="togglePlaying">
                             <SbIcon :name="state.isPlaying ? 'Pause' : 'PlayFill'" />
                         </button>
                     </template>
-                </SpotifyCard>
+                </TrackCard>
 
                 <div class="card">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
@@ -116,11 +109,11 @@
 import { computed, onBeforeUnmount, onMounted } from 'vue';
 import SbIcon from '../components/SbIcon.vue';
 import GuessInput from '../components/GuessInput.vue';
-import SpotifyCard from '../components/SpotifyCard.vue';
+import TrackCard from '../components/TrackCard.vue';
 import StepBar from '../components/StepBar.vue';
 import { STEPS, type Strings } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
-import { useSpotifyPlayer } from '../composables/useSpotifyPlayer';
+import { useLocalAudioPlayer } from '../composables/useLocalAudioPlayer';
 
 const props = defineProps<{ t: Strings; session: GameSession }>();
 
@@ -128,7 +121,7 @@ const emit = defineEmits<{
     (e: 'guess', text: string): void;
 }>();
 
-const spotify = useSpotifyPlayer();
+const playback = useLocalAudioPlayer();
 
 const state = computed(() => props.session.state.value);
 
@@ -157,20 +150,20 @@ const nextStepLabel = computed(() => {
 let watchdogHandle: ReturnType<typeof setInterval> | null = null;
 
 function checkSnippetLimit(): void {
-    // Gate on Spotify's own playing state, not `state.value.isPlaying` — that flag
-    // comes from the backend's wall-clock timer and only updates once per ~1.5s
-    // poll. If that clock crosses the limit and flips it to false before this
-    // position-based check catches up, gating on it here would exit early and
-    // never re-arm, leaving the real audio playing forever. Spotify's own state is
-    // the ground truth for whether audio is actually still going.
-    if (!spotify.isReady.value || !spotify.isPlaying.value)
+    // Gate on the <audio> element's own playing state, not `state.value.isPlaying` —
+    // that flag comes from the backend's wall-clock timer and only updates once per
+    // ~1.5s poll. If that clock crosses the limit and flips it to false before this
+    // position-based check catches up, gating on it here would exit early and never
+    // re-arm, leaving the real audio playing forever. The element's own state is the
+    // ground truth for whether audio is actually still going.
+    if (!playback.isPlaying.value)
     {
         return;
     }
 
-    if (spotify.getEstimatedPositionMs() >= stepLimit.value * 1000)
+    if (playback.getEstimatedPositionMs() >= stepLimit.value * 1000)
     {
-        spotify.pause();
+        playback.pause();
 
         if (state.value?.isPlaying)
         {
@@ -201,7 +194,7 @@ async function togglePlaying(): Promise<void> {
         return;
     }
 
-    void spotify.activateElement();
+    void playback.activateElement();
 
     const playing = !state.value.isPlaying;
 
@@ -214,36 +207,27 @@ async function togglePlaying(): Promise<void> {
         return;
     }
 
-    const ready = await spotify.ensureReady();
-
-    if (!ready)
-    {
-        spotify.error.value = 'Spotify player not ready (isReady=false) — play/pause was not sent to Spotify';
-
-        return;
-    }
-
     if (playing)
     {
-        spotify.resume();
+        playback.resume();
     }
     else
     {
-        spotify.pause();
+        playback.pause();
     }
 }
 
 async function skip(): Promise<void> {
-    void spotify.activateElement();
+    void playback.activateElement();
 
-    // No explicit Spotify sync here — if this advances to a new track (last step ->
-    // next song), GamePage's global spotifyTrackId watcher picks it up. If it's just a
-    // step increment within the same track, there's nothing to sync.
+    // No explicit sync here — if this advances to a new track (last step -> next song),
+    // GamePage's global watcher picks it up. If it's just a step increment within the
+    // same track, there's nothing to sync.
     await props.session.skip().catch(() => undefined);
 }
 
 async function restart(): Promise<void> {
-    void spotify.activateElement();
+    void playback.activateElement();
 
     try
     {
@@ -251,34 +235,29 @@ async function restart(): Promise<void> {
     }
     catch (err)
     {
-        spotify.error.value = `Game restart request failed: ${err instanceof Error ? err.message : String(err)}`;
+        playback.error.value = `Game restart request failed: ${err instanceof Error ? err.message : String(err)}`;
 
         return;
     }
 
-    if (!state.value?.spotifyTrackId)
+    const hash = props.session.game.value?.hash;
+    const token = props.session.player.value?.token;
+    const audioTrackId = state.value?.audioTrackId;
+
+    if (!hash || !token || audioTrackId == null)
     {
-        spotify.error.value = 'No Spotify track id for the current song — nothing to restart';
+        playback.error.value = 'No audio track id for the current song — nothing to restart';
 
         return;
     }
 
-    const ready = await spotify.ensureReady();
-
-    if (!ready)
-    {
-        spotify.error.value = 'Spotify player not ready (isReady=false) — restart was not sent to Spotify';
-
-        return;
-    }
-
-    spotify.playFromStart(state.value.spotifyTrackId, state.value.isPlaying);
+    playback.playFromStart(hash, token, audioTrackId, state.value?.isPlaying ?? false);
 }
 
 async function next(): Promise<void> {
-    void spotify.activateElement();
+    void playback.activateElement();
 
-    // GamePage's global spotifyTrackId watcher handles the Spotify sync once this resolves.
+    // GamePage's global watcher handles the sync once this resolves.
     await props.session.nextSong().catch(() => undefined);
 }
 

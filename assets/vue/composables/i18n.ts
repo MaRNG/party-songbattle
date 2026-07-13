@@ -12,6 +12,7 @@ export interface Strings {
     or: string;
     landing_play_solo: string;
     landing_play_party: string;
+    landing_play_music: string;
     create_title: string;
     create_sub: string;
     mode_solo_t: string;
@@ -135,13 +136,14 @@ export const SB_I18N: Record<Lang, Strings> = {
         brandSub: 'PARTY MIX',
         landing_eyebrow: 'PARTY HUDEBNÍ KVÍZ',
         landing_title: 'Uhodni písničku\ndřív než dohraje',
-        landing_lead: 'Vytvoř hru, pusť Spotify a hádej. Čím rychleji, tím víc bodů. Hraj sám, na střídačku nebo všichni najednou.',
+        landing_lead: 'Vytvoř hru, pusť písničku a hádej. Čím rychleji, tím víc bodů. Hraj sám, na střídačku nebo všichni najednou.',
         cta_create: 'Vytvořit hru',
         cta_join: 'Připojit se',
         code_placeholder: 'Kód hry',
         or: 'nebo',
         landing_play_solo: 'Hraj sám',
         landing_play_party: 'Hraj na párty',
+        landing_play_music: 'Hudba',
         create_title: 'Nová hra',
         create_sub: 'Vyber mód a nastav filtry',
         mode_solo_t: 'Sám',
@@ -263,13 +265,14 @@ export const SB_I18N: Record<Lang, Strings> = {
         brandSub: 'PARTY MIX',
         landing_eyebrow: 'PARTY MUSIC QUIZ',
         landing_title: 'Guess the song\nbefore it ends',
-        landing_lead: 'Create a game, hit play on Spotify, and guess. The faster you nail it, the more points you score. Solo, round-robin, or everyone at once.',
+        landing_lead: 'Create a game, hit play on a song, and guess. The faster you nail it, the more points you score. Solo, round-robin, or everyone at once.',
         cta_create: 'Create game',
         cta_join: 'Join game',
         code_placeholder: 'Game code',
         or: 'or',
         landing_play_solo: 'Play solo',
         landing_play_party: 'Play with friends',
+        landing_play_music: 'Music',
         create_title: 'New game',
         create_sub: 'Pick a mode and tune the pool',
         mode_solo_t: 'Solo',

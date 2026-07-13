@@ -29,7 +29,7 @@
         <div style="display: flex; gap: 8px; margin: 20px auto 0; justify-content: center; flex-wrap: wrap;">
             <span class="pill">🎮 {{ t.landing_play_solo }}</span>
             <span class="pill">🎉 {{ t.landing_play_party }}</span>
-            <span class="pill">🎧 Spotify</span>
+            <span class="pill">🎧 {{ t.landing_play_music }}</span>
         </div>
     </div>
 </template>

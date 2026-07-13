@@ -1,14 +1,12 @@
 import { computed, watch, type Ref } from 'vue';
 import type { GameSession } from './useGameSession';
 import type { TrackInfoDto } from '../api/client';
-import { useSpotifyPlayer } from './useSpotifyPlayer';
+import { useLocalAudioPlayer } from './useLocalAudioPlayer';
 
 export function useFullTrackPlayback(track: Ref<TrackInfoDto | null>, session: GameSession) {
-    const spotify = useSpotifyPlayer();
+    const playback = useLocalAudioPlayer();
 
-    const canPlayFullTrack = computed(() =>
-        session.isMaster.value && !!track.value?.spotifyTrackId,
-    );
+    const canPlayFullTrack = computed(() => session.isMaster.value && track.value?.audioTrackId != null);
 
     let hasStartedFullTrack = false;
 
@@ -17,41 +15,34 @@ export function useFullTrackPlayback(track: Ref<TrackInfoDto | null>, session: G
     });
 
     async function toggleFullTrack(): Promise<void> {
-        const trackId = track.value?.spotifyTrackId;
+        const audioTrackId = track.value?.audioTrackId;
+        const hash = session.game.value?.hash;
+        const token = session.player.value?.token;
 
-        if (!trackId)
+        if (audioTrackId == null || !hash || !token)
         {
             return;
         }
 
-        void spotify.activateElement();
+        void playback.activateElement();
 
         if (!hasStartedFullTrack)
         {
-            const ready = await spotify.ensureReady();
-
-            if (!ready)
-            {
-                spotify.error.value = 'Spotify player not ready (isReady=false) — could not play the full track';
-
-                return;
-            }
-
-            await spotify.playFromStart(trackId, true);
+            await playback.playFromStart(hash, token, audioTrackId, true);
             hasStartedFullTrack = true;
 
             return;
         }
 
-        if (spotify.isPlaying.value)
+        if (playback.isPlaying.value)
         {
-            await spotify.pause();
+            await playback.pause();
         }
         else
         {
-            await spotify.resume();
+            await playback.resume();
         }
     }
 
-    return { spotify, canPlayFullTrack, toggleFullTrack };
+    return { playback, canPlayFullTrack, toggleFullTrack };
 }

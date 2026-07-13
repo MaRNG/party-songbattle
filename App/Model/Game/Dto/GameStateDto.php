@@ -26,7 +26,7 @@ final readonly class GameStateDto
         public int                $totalTracks,
         public ?GameTrackInfoDto  $track,
         public ?GameTrackInfoDto  $previousTrack,
-        public ?string            $spotifyTrackId,
+        public ?int               $audioTrackId,
         public ?GameRoundResultDto $roundResult,
         public bool               $showLeaderboardToPlayers,
         public array              $players,

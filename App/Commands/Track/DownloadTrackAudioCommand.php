@@ -133,8 +133,11 @@ final class DownloadTrackAudioCommand extends Command
                     continue;
                 }
 
+                // Stored as a bare filename, not the absolute path yt-dlp wrote to — the
+                // serving side resolves it against its own configured audio directory, so
+                // the DB never pins down (or leaks) an absolute filesystem path.
                 $track->setAudioYoutubeUrl($result->youtubeUrl);
-                $track->setAudioFilePath($result->filePath);
+                $track->setAudioFilePath(basename($result->filePath));
                 $track->setAudioDownloaded(true);
 
                 $this->entityManager->persist($track);

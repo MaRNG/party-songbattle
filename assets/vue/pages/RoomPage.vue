@@ -46,14 +46,6 @@
 
                 <div class="divider" />
 
-                <button
-                    v-if="session.isMaster.value && !spotify.isAuthenticated.value"
-                    class="btn btn-ghost btn-block mt-8"
-                    @click="spotify.connect()"
-                >
-                    <SbIcon name="Disc" /> {{ lang === 'cs' ? 'Připojit Spotify' : 'Connect Spotify' }}
-                </button>
-                <div v-if="spotify.error.value" class="mono small muted center mt-8">{{ spotify.error.value }}</div>
                 <div v-if="startError" class="mono small muted center mt-8">{{ startError }}</div>
 
                 <button v-if="session.isMaster.value" class="btn btn-primary btn-block mt-8" @click="start">
@@ -77,12 +69,12 @@ import { computed, ref } from 'vue';
 import SbIcon from '../components/SbIcon.vue';
 import type { Strings, Lang } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
-import { useSpotifyPlayer } from '../composables/useSpotifyPlayer';
+import { useLocalAudioPlayer } from '../composables/useLocalAudioPlayer';
 import { ApiError } from '../api/client';
 
 const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
 
-const spotify = useSpotifyPlayer();
+const playback = useLocalAudioPlayer();
 const startError = ref<string | null>(null);
 
 const code = computed(() => props.session.game.value?.code ?? '');
@@ -105,7 +97,10 @@ function copyCode(): void {
 }
 
 async function start(): Promise<void> {
-    void spotify.activateElement();
+    // Unlocks the <audio> element for the scripted play() call GamePage's
+    // audioTrackId watcher makes once startGame() below flips the state to
+    // 'playing' — that watcher call itself isn't inside this click gesture.
+    void playback.activateElement();
     startError.value = null;
 
     try
@@ -124,26 +119,6 @@ async function start(): Promise<void> {
         {
             startError.value = null;
         }
-
-        return;
     }
-
-    const state = props.session.state.value;
-
-    if (!state?.spotifyTrackId)
-    {
-        return;
-    }
-
-    const ready = await spotify.ensureReady();
-
-    if (!ready)
-    {
-        spotify.error.value = 'Spotify player not ready (isReady=false) — game started but nothing was sent to Spotify';
-
-        return;
-    }
-
-    spotify.playFromStart(state.spotifyTrackId, state.isPlaying);
 }
 </script>

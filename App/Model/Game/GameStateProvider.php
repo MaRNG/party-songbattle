@@ -9,7 +9,6 @@ use App\Infrastructure\Database\Entity\Game\GameTrack;
 use App\Infrastructure\Database\Repository\GameGuessRepository;
 use App\Infrastructure\Database\Repository\GamePlayerRepository;
 use App\Infrastructure\Database\Repository\GameTrackRepository;
-use App\Model\Enum\ExternalSourceEnum;
 use App\Model\Enum\GameModeEnum;
 use App\Model\Enum\GamePlayerRoleEnum;
 use App\Model\Enum\GameStatusEnum;
@@ -47,8 +46,8 @@ final readonly class GameStateProvider
         // Tracks are already inflated the instant the game is created, long before the
         // master presses "Start game" — gate this on status too, or the master's browser
         // would try to load/play the first track's audio while still sitting in the lobby.
-        $spotifyTrackId = ($isMaster && $currentTrack !== null && $game->getStatus() === GameStatusEnum::PLAYING)
-            ? $this->resolveSpotifyTrackId($currentTrack)
+        $audioTrackId = ($isMaster && $currentTrack !== null && $game->getStatus() === GameStatusEnum::PLAYING)
+            ? $this->resolveAudioTrackId($currentTrack)
             : null;
 
         $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
@@ -74,9 +73,9 @@ final readonly class GameStateProvider
             ? new GameTrackInfoDto(
                 $previousGameTrack->getTrackName(),
                 $previousGameTrack->getArtistName(),
-                // Only the master's browser holds a live Spotify Connect device, so only
+                // Only the master's browser actually plays audio for the room, so only
                 // they get the id needed to play the full track back on the reveal screen.
-                $isMaster ? $this->resolveSpotifyTrackId($previousGameTrack) : null,
+                $isMaster ? $this->resolveAudioTrackId($previousGameTrack) : null,
             )
             : null;
 
@@ -126,7 +125,7 @@ final readonly class GameStateProvider
             totalTracks  : count($tracks),
             track        : $revealTrack ? new GameTrackInfoDto($currentTrack->getTrackName(), $currentTrack->getArtistName()) : null,
             previousTrack: $previousTrack,
-            spotifyTrackId: $spotifyTrackId,
+            audioTrackId : $audioTrackId,
             roundResult  : $roundResult,
             showLeaderboardToPlayers: $game->isShowLeaderboardToPlayers(),
             players      : array_map(
@@ -177,12 +176,12 @@ final readonly class GameStateProvider
         return $byPlayer;
     }
 
-    private function resolveSpotifyTrackId(GameTrack $currentTrack): ?string
+    private function resolveAudioTrackId(GameTrack $gameTrack): ?int
     {
-        $originTrack = $currentTrack->getOriginTrack();
+        $originTrack = $gameTrack->getOriginTrack();
 
-        return $originTrack->getExternalSource() === ExternalSourceEnum::SPOTIFY
-            ? $originTrack->getExternalId()
+        return $originTrack !== null && $originTrack->isAudioDownloaded() && $originTrack->getAudioFilePath() !== null
+            ? $gameTrack->getId()
             : null;
     }
 

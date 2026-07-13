@@ -36,7 +36,7 @@ export interface SessionDto {
 export interface TrackInfoDto {
     trackName: string;
     artistName: string;
-    spotifyTrackId: string | null;
+    audioTrackId: number | null;
 }
 
 export interface PlayerStateDto {
@@ -80,7 +80,7 @@ export interface GameStateDto {
     totalTracks: number;
     track: TrackInfoDto | null;
     previousTrack: TrackInfoDto | null;
-    spotifyTrackId: string | null;
+    audioTrackId: number | null;
     roundResult: RoundResultDto | null;
     showLeaderboardToPlayers: boolean;
     players: PlayerStateDto[];
@@ -193,6 +193,11 @@ export const SongBattleApi = {
 
     suggestTracks: (hash: string, token: string, query: string) =>
         request<{ suggestions: TrackInfoDto[] }>('GET', `/games/${hash}/suggest?q=${encodeURIComponent(query)}`, undefined, token),
+
+    // Used directly as an <audio> src — the browser's media engine can't send the
+    // X-Player-Token header, so the token travels as a query parameter here instead.
+    trackAudioUrl: (hash: string, token: string, audioTrackId: number) =>
+        `${BASE}/games/${hash}/tracks/${audioTrackId}/audio?token=${encodeURIComponent(token)}`,
 };
 
 export { ApiError };

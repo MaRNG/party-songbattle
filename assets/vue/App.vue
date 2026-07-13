@@ -20,7 +20,6 @@ import { useRoute, useRouter } from 'vue-router';
 import TopBar from './components/TopBar.vue';
 import SbIcon from './components/SbIcon.vue';
 import { useGameSession } from './composables/useGameSession';
-import { useSpotifyPlayer } from './composables/useSpotifyPlayer';
 import { SB_I18N, type Lang } from './composables/i18n';
 
 const lang = ref<Lang>('cs');
@@ -38,13 +37,10 @@ function onTheme(value: 'dark' | 'light'): void {
 }
 
 const session = useGameSession();
-const spotify = useSpotifyPlayer();
 const route = useRoute();
 const router = useRouter();
 
 onMounted(async () => {
-    await spotify.handleAuthCallback(router);
-
     if (route.name === 'game')
     {
         return;

@@ -37,13 +37,13 @@
             <h1 class="sb-reveal display" style="font-size: 40px; margin: 8px 0 4px;">{{ t.correct_title }}</h1>
 
             <div v-if="track" class="sb-reveal-2" style="margin-top: 20px;">
-                <SpotifyCard :track-name="track.trackName" :artist-name="track.artistName">
+                <TrackCard :track-name="track.trackName" :artist-name="track.artistName">
                     <template v-if="canPlayFullTrack" #controls>
-                        <button class="spfy-btn play" @click="toggleFullTrack">
-                            <SbIcon :name="spotify.isPlaying.value ? 'Pause' : 'PlayFill'" />
+                        <button class="track-btn play" @click="toggleFullTrack">
+                            <SbIcon :name="playback.isPlaying.value ? 'Pause' : 'PlayFill'" />
                         </button>
                     </template>
-                </SpotifyCard>
+                </TrackCard>
             </div>
         </div>
 
@@ -71,7 +71,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import SpotifyCard from '../components/SpotifyCard.vue';
+import TrackCard from '../components/TrackCard.vue';
 import SbIcon from '../components/SbIcon.vue';
 import { type Strings } from '../composables/i18n';
 import type { RoundResultDto, TrackInfoDto } from '../api/client';
@@ -102,5 +102,5 @@ const autoContinueSeconds = computed(() => {
 });
 
 const trackRef = computed(() => props.track);
-const { spotify, canPlayFullTrack, toggleFullTrack } = useFullTrackPlayback(trackRef, props.session);
+const { playback, canPlayFullTrack, toggleFullTrack } = useFullTrackPlayback(trackRef, props.session);
 </script>

@@ -55,13 +55,25 @@ import MissedPage from './MissedPage.vue';
 import ResultsPage from './ResultsPage.vue';
 import type { Strings, Lang } from '../composables/i18n';
 import type { GameSession } from '../composables/useGameSession';
-import { useSpotifyPlayer } from '../composables/useSpotifyPlayer';
+import { useLocalAudioPlayer } from '../composables/useLocalAudioPlayer';
 
 const props = defineProps<{ t: Strings; lang: Lang; session: GameSession }>();
 
 const route = useRoute();
 const router = useRouter();
-const spotify = useSpotifyPlayer();
+const playback = useLocalAudioPlayer();
+
+async function syncPlayback(audioTrackId: number | null, shouldBePlaying: boolean): Promise<void> {
+    const hash = props.session.game.value?.hash;
+    const token = props.session.player.value?.token;
+
+    if (audioTrackId == null || !hash || !token)
+    {
+        return;
+    }
+
+    await playback.ensureTrackLoaded(hash, token, audioTrackId, shouldBePlaying);
+}
 
 // The Correct/Missed reveal is entirely server-driven via `state.roundResult` (set the
 // instant a round ends, cleared only by the master's continueRound() call) — so every
@@ -104,28 +116,31 @@ const screen = computed(() => {
 
 // Lives here (not in MasterPage) because MasterPage unmounts during the Correct/Missed
 // overlay — exactly the window in which a correct guess (or skip's last-step advance)
-// changes the track. Comparing against the singleton's own `loadedTrackId` internally
-// makes this safe to fire from a freshly (re)mounted GamePage too.
-watch(() => props.session.state.value?.spotifyTrackId, (trackId) => {
-    if (!trackId || !props.session.isMaster.value)
-    {
-        return;
-    }
+// changes the track. Comparing against the singleton's own loaded-track bookkeeping
+// internally makes this safe to fire from a freshly (re)mounted GamePage too.
+watch(
+    () => props.session.state.value?.audioTrackId ?? null,
+    (audioTrackId) => {
+        if (audioTrackId == null || !props.session.isMaster.value)
+        {
+            return;
+        }
 
-    if (props.session.state.value?.roundResult !== null)
-    {
-        // The backend already advanced to this track the instant the round ended, but
-        // the Correct/Missed reveal is still showing the track that was just played —
-        // don't preempt it by loading the next one onto the device yet. continueRound()
-        // syncs to it once the master actually continues.
-        return;
-    }
+        if (props.session.state.value?.roundResult !== null)
+        {
+            // The backend already advanced to this track the instant the round ended, but
+            // the Correct/Missed reveal is still showing the track that was just played —
+            // don't preempt it by loading the next one onto the device yet. continueRound()
+            // syncs to it once the master actually continues.
+            return;
+        }
 
-    void spotify.ensureTrackLoaded(trackId, props.session.state.value?.isPlaying ?? false);
-});
+        void syncPlayback(audioTrackId, props.session.state.value?.isPlaying ?? false);
+    },
+);
 
 // ALL mode clears the reveal automatically (server-timed), with no click on
-// continueRound() to trigger a resync — `spotifyTrackId` itself already changed the
+// continueRound() to trigger a resync — `audioTrackId` itself already changed the
 // instant the round ended (well before this), so that watcher above won't refire on
 // its own. Catch the reveal->null transition directly instead, mirroring what
 // continueRound() does manually for the master-click case elsewhere.
@@ -135,12 +150,7 @@ watch(() => props.session.state.value?.roundResult, (result, previous) => {
         return;
     }
 
-    const trackId = props.session.state.value?.spotifyTrackId;
-
-    if (trackId)
-    {
-        void spotify.ensureTrackLoaded(trackId, props.session.state.value?.isPlaying ?? false);
-    }
+    void syncPlayback(props.session.state.value?.audioTrackId ?? null, props.session.state.value?.isPlaying ?? false);
 });
 
 const flashMessage = ref<string | null>(null);
@@ -185,7 +195,7 @@ async function handleGuess(text: string): Promise<void> {
         showFlash(props.t.incorrect);
     }
 
-    // Refresh so `session.state` (roundResult, trackPosition, spotifyTrackId, ...)
+    // Refresh so `session.state` (roundResult, trackPosition, audioTrackId, ...)
     // catches up to the backend's already-applied outcome — this is what actually
     // flips `screen` to 'correct'/'missed' for a round-ending guess, for every viewer
     // polling this same shared state, not just this one.
@@ -201,16 +211,11 @@ async function continueRound(): Promise<void> {
     await props.session.continueRound();
 
     // CorrectPage/MissedPage may have played the just-revealed track to full length,
-    // which repoints the Spotify device away from the current round's track. Re-sync it
-    // back now — the `spotifyTrackId` watcher above won't fire on its own here, since
-    // that id already changed (and was ignored) the instant the round ended, well
-    // before this continue click.
-    const trackId = props.session.state.value?.spotifyTrackId;
-
-    if (trackId)
-    {
-        void spotify.ensureTrackLoaded(trackId, props.session.state.value?.isPlaying ?? false);
-    }
+    // which repoints playback away from the current round's track. Re-sync it back now
+    // — the track-id watcher above won't fire on its own here, since that id already
+    // changed (and was ignored) the instant the round ended, well before this continue
+    // click.
+    void syncPlayback(props.session.state.value?.audioTrackId ?? null, props.session.state.value?.isPlaying ?? false);
 }
 
 function leave(): void {

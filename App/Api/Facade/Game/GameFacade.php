@@ -21,6 +21,7 @@ use App\Model\Game\GameFactory;
 use App\Model\Game\GameFilterOptionsProvider;
 use App\Model\Game\GameSessionManager;
 use App\Model\Game\GameStateProvider;
+use App\Model\Game\GameTrackAudioProvider;
 
 final readonly class GameFacade
 {
@@ -32,6 +33,7 @@ final readonly class GameFacade
         private GameFilterOptionsProvider $gameFilterOptionsProvider,
         private GameSessionManager       $gameSessionManager,
         private GameStateProvider        $gameStateProvider,
+        private GameTrackAudioProvider   $gameTrackAudioProvider,
     )
     {
     }
@@ -255,6 +257,18 @@ final readonly class GameFacade
             static fn (GameTrack $track) => new GameTrackInfoDto($track->getTrackName(), $track->getArtistName()),
             $tracks,
         );
+    }
+
+    public function getTrackAudioPath(string $hash, string $token, int $gameTrackId): string
+    {
+        $game = $this->getGameByHash($hash);
+        $player = $this->getPlayerByToken($game, $token);
+
+        // Only the master's device ever plays audio out loud for the room — other
+        // players' clients never stream this.
+        $this->assertMaster($player);
+
+        return $this->gameTrackAudioProvider->resolveFilePath($game, $gameTrackId);
     }
 
     private function getGameByHash(string $hash): Game

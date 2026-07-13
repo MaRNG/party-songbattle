@@ -1,6 +1,6 @@
 <template>
-    <div class="spotify-card" style="position: relative;">
-        <div class="spfy-logo">♪</div>
+    <div class="track-card" style="position: relative;">
+        <div class="track-logo">♪</div>
         <div class="cover" />
         <div class="meta">
             <p class="title">{{ trackName }}</p>

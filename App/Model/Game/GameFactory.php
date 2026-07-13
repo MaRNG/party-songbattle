@@ -115,7 +115,12 @@ final readonly class GameFactory
         $qb
             ->select('DISTINCT u.id')
             ->innerJoin('u.artists', '_artists')
-            ->innerJoin('u.genres', '_genres');
+            ->innerJoin('u.genres', '_genres')
+            // Only tracks with downloaded local audio are actually playable in-game now
+            // (see GameTrackAudioProvider) — excluding the rest here keeps poolCount and
+            // the tracks actually inflated into the game in sync.
+            ->andWhere('u.audio_downloaded = true')
+            ->andWhere('u.audio_file_path IS NOT NULL');
 
         if ($gameFilterList->year_filter !== [])
         {

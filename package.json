@@ -8,7 +8,6 @@
     "dev": "webpack --mode development"
   },
   "devDependencies": {
-    "@types/spotify-web-playback-sdk": "^0.1.19",
     "@vue/compiler-sfc": "^3.5.13",
     "css-loader": "^7.1.2",
     "mini-css-extract-plugin": "^2.9.2",

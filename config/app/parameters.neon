@@ -1,4 +1,8 @@
 parameters:
+    # Not under %wwwDir% on purpose — track audio must only be reachable through the
+    # authenticated /games/{hash}/tracks/{gameTrackId}/audio endpoint, never as a static file.
+    trackAudioDirectory: %rootDir%/var/audio/mp3
+
     spotify:
         app:
             clientId: ''
