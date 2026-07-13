@@ -16,6 +16,14 @@ use Symfony\Component\Console\Output\OutputInterface;
 #[AsCommand(name: 'tracks:download-audio')]
 final class DownloadTrackAudioCommand extends Command
 {
+    /**
+     * Browsers yt-dlp's --cookies-from-browser knows how to read cookies from.
+     * A value may also carry a ":profile" or "+keyring" suffix, e.g. "firefox:default-release".
+     */
+    private const SUPPORTED_COOKIE_BROWSERS = [
+        'brave', 'chrome', 'chromium', 'edge', 'firefox', 'opera', 'safari', 'vivaldi', 'whale',
+    ];
+
     public function __construct(
         private readonly TrackRepository               $trackRepository,
         private readonly EntityManagerInterface        $entityManager,
@@ -34,6 +42,19 @@ final class DownloadTrackAudioCommand extends Command
             InputOption::VALUE_REQUIRED,
             'Maximum number of tracks to process in this run'
         );
+
+        $this->addOption(
+            'cookies-from-browser',
+            null,
+            InputOption::VALUE_REQUIRED,
+            sprintf(
+                'Read cookies from this browser\'s local profile for yt-dlp (--cookies-from-browser), ' .
+                'used to get past YouTube age/bot-check gates. One of: %s. Optionally suffixed with ' .
+                ':PROFILE (e.g. "firefox:default-release"). Works on Linux as long as the named browser ' .
+                'and its profile are present on this machine.',
+                implode(', ', self::SUPPORTED_COOKIE_BROWSERS)
+            )
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -46,6 +67,26 @@ final class DownloadTrackAudioCommand extends Command
 
         $limitOption = $input->getOption('limit');
         $limit = $limitOption !== null ? (int)$limitOption : null;
+
+        $cookiesFromBrowser = $input->getOption('cookies-from-browser');
+
+        if ($cookiesFromBrowser !== null)
+        {
+            $browserName = strtolower(strtok($cookiesFromBrowser, ':+'));
+
+            if (!in_array($browserName, self::SUPPORTED_COOKIE_BROWSERS, true))
+            {
+                CliWriter::writeNl(
+                    sprintf(
+                        'Unknown browser "%s" for --cookies-from-browser. Supported: %s.',
+                        $browserName,
+                        implode(', ', self::SUPPORTED_COOKIE_BROWSERS)
+                    )
+                );
+
+                return self::FAILURE;
+            }
+        }
 
         CliWriter::writeNl('Start downloading track audio...');
 
@@ -83,7 +124,7 @@ final class DownloadTrackAudioCommand extends Command
 
             try
             {
-                $result = $this->trackAudioDownloader->download($track, $this->targetDirectory);
+                $result = $this->trackAudioDownloader->download($track, $this->targetDirectory, $cookiesFromBrowser);
 
                 if ($result === null)
                 {

@@ -4,3 +4,4 @@ vendor/*
 .puzzle.history.json
 node_modules
 www/assets/build
+www/files/*

@@ -38,7 +38,7 @@ final class YouTubeTrackAudioDownloader implements TrackAudioDownloaderInterface
         'nightcore', '8d audio', 'karaoke', 'instrumental', 'mashup', 'type beat',
     ];
 
-    public function download(Track $track, string $targetDirectory): ?TrackAudioDownloadResult
+    public function download(Track $track, string $targetDirectory, ?string $cookiesFromBrowser = null): ?TrackAudioDownloadResult
     {
         $trackName = $track->getName();
         $artistsName = implode(', ', array_map(static function(Artist $artist)
@@ -50,7 +50,7 @@ final class YouTubeTrackAudioDownloader implements TrackAudioDownloaderInterface
 
         CliWriter::writeNl(sprintf('Finding track: %s', $trackFindName));
 
-        $candidates = $this->search($trackFindName);
+        $candidates = $this->search($trackFindName, $cookiesFromBrowser);
 
         $rated = [];
 
@@ -92,7 +92,7 @@ final class YouTubeTrackAudioDownloader implements TrackAudioDownloaderInterface
 
         CliWriter::writeNl(sprintf('Selected: %s (score %.1f)', $videoUrl, $rated[0]['score']));
 
-        $filePath = $this->downloadAudio($videoUrl, $track, $targetDirectory);
+        $filePath = $this->downloadAudio($videoUrl, $track, $targetDirectory, $cookiesFromBrowser);
 
         if ($filePath === null)
         {
@@ -105,13 +105,20 @@ final class YouTubeTrackAudioDownloader implements TrackAudioDownloaderInterface
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function search(string $trackFindName): array
+    private function search(string $trackFindName, ?string $cookiesFromBrowser): array
     {
-        $process = new Process([
-            'yt-dlp',
-            '-J',
-            'ytsearch' . self::SEARCH_RESULTS_COUNT . ':' . $trackFindName,
-        ]);
+        $arguments = ['yt-dlp'];
+
+        if ($cookiesFromBrowser !== null)
+        {
+            $arguments[] = '--cookies-from-browser';
+            $arguments[] = $cookiesFromBrowser;
+        }
+
+        $arguments[] = '-J';
+        $arguments[] = 'ytsearch' . self::SEARCH_RESULTS_COUNT . ':' . $trackFindName;
+
+        $process = new Process($arguments);
 
         $process->setTimeout(120);
         $process->mustRun();
@@ -217,7 +224,7 @@ final class YouTubeTrackAudioDownloader implements TrackAudioDownloaderInterface
         return trim(preg_replace('/[^a-z0-9]+/', ' ', Strings::lower(Strings::toAscii($text))));
     }
 
-    private function downloadAudio(string $videoUrl, Track $track, string $targetDirectory): ?string
+    private function downloadAudio(string $videoUrl, Track $track, string $targetDirectory, ?string $cookiesFromBrowser): ?string
     {
         $outputTemplate = rtrim($targetDirectory, '/') . '/track_' . $track->getId() . '.%(ext)s';
         $filePath = rtrim($targetDirectory, '/') . '/track_' . $track->getId() . '.mp3';
@@ -228,8 +235,16 @@ final class YouTubeTrackAudioDownloader implements TrackAudioDownloaderInterface
 
             try
             {
-                $process = new Process([
-                    'yt-dlp',
+                $arguments = ['yt-dlp'];
+
+                if ($cookiesFromBrowser !== null)
+                {
+                    $arguments[] = '--cookies-from-browser';
+                    $arguments[] = $cookiesFromBrowser;
+                }
+
+                array_push(
+                    $arguments,
                     '-f', 'bestaudio/best',
                     '--extract-audio',
                     '--audio-format', 'mp3',
@@ -239,7 +254,9 @@ final class YouTubeTrackAudioDownloader implements TrackAudioDownloaderInterface
                     '--max-sleep-interval', '3',
                     '-o', $outputTemplate,
                     $videoUrl,
-                ]);
+                );
+
+                $process = new Process($arguments);
 
                 $process->setTimeout(300);
                 $process->mustRun();
