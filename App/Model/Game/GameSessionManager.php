@@ -15,7 +15,6 @@ use App\Model\Enum\GameStatusEnum;
 use App\Model\Game\Dto\GameGuessResultDto;
 use Doctrine\ORM\EntityManagerInterface;
 use Nette\Utils\Random;
-use Nette\Utils\Strings;
 
 final readonly class GameSessionManager
 {
@@ -274,14 +273,14 @@ final readonly class GameSessionManager
         $this->entityManager->flush();
     }
 
-    public function submitGuess(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
+    public function submitGuess(Game $game, GamePlayer $player, int $trackId): GameGuessResultDto
     {
         return $game->getMode() === GameModeEnum::ALL
-            ? $this->submitGuessForAll($game, $player, $guess)
-            : $this->submitGuessTurnBased($game, $player, $guess);
+            ? $this->submitGuessForAll($game, $player, $trackId)
+            : $this->submitGuessTurnBased($game, $player, $trackId);
     }
 
-    private function submitGuessTurnBased(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
+    private function submitGuessTurnBased(Game $game, GamePlayer $player, int $trackId): GameGuessResultDto
     {
         $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
         $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
@@ -289,7 +288,7 @@ final readonly class GameSessionManager
         // the raw elapsed time past the step's own length — clamp to it so a guess on the
         // 0.5s step never gets reported (or scored) as if it took, say, 1.76s.
         $atSeconds = round(min($game->getCurrentElapsedSeconds(), $stepSeconds), 2);
-        $correct = $track instanceof GameTrack && $this->matchesGuess($track, $guess);
+        $correct = $track instanceof GameTrack && $track->getId() === $trackId;
 
         $player->setGuesses($player->getGuesses() + 1);
 
@@ -366,7 +365,7 @@ final readonly class GameSessionManager
      * only once every eligible player has either guessed correctly or run out of
      * attempts (see isAllModeRoundComplete()/finishAllModeTrack()).
      */
-    private function submitGuessForAll(Game $game, GamePlayer $player, string $guess): GameGuessResultDto
+    private function submitGuessForAll(Game $game, GamePlayer $player, int $trackId): GameGuessResultDto
     {
         $track = $this->gameTrackRepository->findAtPosition($game, $game->getCurrentTrackPosition());
 
@@ -379,7 +378,7 @@ final readonly class GameSessionManager
 
         $stepSeconds = GameRules::STEPS[$game->getCurrentStepIndex()];
         $atSeconds = round(min($game->getCurrentElapsedSeconds(), $stepSeconds), 2);
-        $correct = $this->matchesGuess($track, $guess);
+        $correct = $track->getId() === $trackId;
 
         $player->setGuesses($player->getGuesses() + 1);
 
@@ -642,26 +641,5 @@ final readonly class GameSessionManager
         $this->entityManager->flush();
 
         return $game;
-    }
-
-    private function matchesGuess(GameTrack $track, string $guess): bool
-    {
-        $needle = Strings::lower(trim($guess));
-
-        if ($needle === '')
-        {
-            return false;
-        }
-
-        $trackName = Strings::lower($track->getTrackName());
-        $artistName = Strings::lower($track->getArtistName());
-
-        // Checked both ways: a short partial guess is contained in the full track/artist
-        // name, while picking a suggestion (which fills the input with "track - artist")
-        // instead contains the full track/artist name as a substring of itself.
-        return Strings::contains($trackName, $needle)
-            || Strings::contains($artistName, $needle)
-            || Strings::contains($needle, $trackName)
-            || Strings::contains($needle, $artistName);
     }
 }

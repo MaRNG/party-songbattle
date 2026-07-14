@@ -183,7 +183,7 @@ final class GameController extends BasePublicV1Controller
         $result = $this->gameFacade->submitGuess(
             (string)$request->getParameter('hash'),
             $this->parseToken($request),
-            (string)($body['guess'] ?? ''),
+            (int)($body['trackId'] ?? 0),
         );
 
         return $response->writeJsonBody($this->serializeGuessResult($result));
@@ -510,6 +510,7 @@ final class GameController extends BasePublicV1Controller
             'trackName'      => $dto->trackName,
             'artistName'     => $dto->artistName,
             'audioTrackId'   => $dto->audioTrackId,
+            'id'             => $dto->id,
         ];
     }
 

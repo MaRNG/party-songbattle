@@ -211,13 +211,13 @@ export function useGameSession() {
         state.value = await SongBattleApi.continueRound(game.value.hash, player.value.token);
     }
 
-    async function submitGuess(guess: string) {
+    async function submitGuess(trackId: number) {
         if (game.value === null || player.value === null)
         {
             return null;
         }
 
-        return SongBattleApi.submitGuess(game.value.hash, player.value.token, guess);
+        return SongBattleApi.submitGuess(game.value.hash, player.value.token, trackId);
     }
 
     async function passRound(): Promise<void> {

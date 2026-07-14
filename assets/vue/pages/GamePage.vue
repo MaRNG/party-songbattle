@@ -180,8 +180,8 @@ function showFlash(message: string): void {
     }, 2000);
 }
 
-async function handleGuess(text: string): Promise<void> {
-    const result = await props.session.submitGuess(text);
+async function handleGuess(trackId: number): Promise<void> {
+    const result = await props.session.submitGuess(trackId);
 
     if (!result)
     {

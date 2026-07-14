@@ -37,6 +37,7 @@ export interface TrackInfoDto {
     trackName: string;
     artistName: string;
     audioTrackId: number | null;
+    id: number | null;
 }
 
 export interface PlayerStateDto {
@@ -179,8 +180,8 @@ export const SongBattleApi = {
     continueRound: (hash: string, token: string) =>
         request<GameStateDto>('POST', `/games/${hash}/continue`, {}, token),
 
-    submitGuess: (hash: string, token: string, guess: string) =>
-        request<GuessResultDto>('POST', `/games/${hash}/guess`, { guess }, token),
+    submitGuess: (hash: string, token: string, trackId: number) =>
+        request<GuessResultDto>('POST', `/games/${hash}/guess`, { trackId }, token),
 
     passRound: (hash: string, token: string) =>
         request<GameStateDto>('POST', `/games/${hash}/pass`, {}, token),

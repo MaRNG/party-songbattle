@@ -23,7 +23,7 @@
                     {{ t.attempts_remaining(me.attemptsRemaining) }}
                 </span>
             </div>
-            <GuessInput :t="t" :session="session" @guess="(text) => emit('guess', text)" />
+            <GuessInput :t="t" :session="session" @guess="(trackId) => emit('guess', trackId)" />
             <button v-if="state?.mode === 'all'" class="btn btn-ghost btn-sm mt-8" @click="pass">
                 {{ t.pass_btn }}
             </button>
@@ -99,7 +99,7 @@ import type { GameSession } from '../composables/useGameSession';
 const props = defineProps<{ t: Strings; session: GameSession }>();
 
 const emit = defineEmits<{
-    (e: 'guess', text: string): void;
+    (e: 'guess', trackId: number): void;
 }>();
 
 const state = computed(() => props.session.state.value);

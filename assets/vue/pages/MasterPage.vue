@@ -118,7 +118,7 @@ import { useLocalAudioPlayer } from '../composables/useLocalAudioPlayer';
 const props = defineProps<{ t: Strings; session: GameSession }>();
 
 const emit = defineEmits<{
-    (e: 'guess', text: string): void;
+    (e: 'guess', trackId: number): void;
 }>();
 
 const playback = useLocalAudioPlayer();
@@ -261,8 +261,8 @@ async function next(): Promise<void> {
     await props.session.nextSong().catch(() => undefined);
 }
 
-function submitGuess(text: string): void {
-    emit('guess', text);
+function submitGuess(trackId: number): void {
+    emit('guess', trackId);
 }
 
 async function editScore(player: { id: number; name: string; score: number }): Promise<void> {

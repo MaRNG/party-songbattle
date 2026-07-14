@@ -8,6 +8,7 @@ final readonly class GameTrackInfoDto
         public string  $trackName,
         public string  $artistName,
         public ?int    $audioTrackId = null,
+        public ?int    $id = null,
     )
     {
     }

@@ -163,7 +163,7 @@ final readonly class GameFacade
         return $this->gameStateProvider->get($game, $player);
     }
 
-    public function submitGuess(string $hash, string $token, string $guess): GameGuessResultDto
+    public function submitGuess(string $hash, string $token, int $trackId): GameGuessResultDto
     {
         $game = $this->getGameByHash($hash);
         $player = $this->getPlayerByToken($game, $token);
@@ -175,7 +175,7 @@ final readonly class GameFacade
             throw new ClientErrorException('No more attempts left for this song', 409);
         }
 
-        return $this->gameSessionManager->submitGuess($game, $player, $guess);
+        return $this->gameSessionManager->submitGuess($game, $player, $trackId);
     }
 
     public function passRound(string $hash, string $token): GameStateDto
@@ -254,7 +254,7 @@ final readonly class GameFacade
         $tracks = $this->gameTrackRepository->searchByGame($game, $query);
 
         return array_map(
-            static fn (GameTrack $track) => new GameTrackInfoDto($track->getTrackName(), $track->getArtistName()),
+            static fn (GameTrack $track) => new GameTrackInfoDto($track->getTrackName(), $track->getArtistName(), id: $track->getId()),
             $tracks,
         );
     }

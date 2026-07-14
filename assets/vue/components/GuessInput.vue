@@ -12,7 +12,7 @@
         />
         <button
             class="btn btn-primary btn-sm guess-submit"
-            :disabled="!guess.trim()"
+            :disabled="selectedId === null"
             @click="submit"
         >
             <SbIcon name="Send" /> <span class="submit-label">{{ t.submit }}</span>
@@ -21,7 +21,7 @@
         <ul v-if="suggestions.length > 0" class="suggest-list">
             <li
                 v-for="(item, index) in suggestions"
-                :key="`${item.trackName}-${item.artistName}`"
+                :key="item.id ?? `${item.trackName}-${item.artistName}`"
                 class="suggest-item"
                 :class="{ active: index === activeIndex }"
                 @mousedown.prevent="selectSuggestion(item)"
@@ -43,17 +43,32 @@ import type { GameSession } from '../composables/useGameSession';
 const props = defineProps<{ t: Strings; session: GameSession }>();
 
 const emit = defineEmits<{
-    (e: 'guess', text: string): void;
+    (e: 'guess', trackId: number): void;
 }>();
 
 const guess = ref('');
 const suggestions = ref<TrackInfoDto[]>([]);
 const activeIndex = ref(-1);
+const selectedId = ref<number | null>(null);
 
 let debounceHandle: ReturnType<typeof setTimeout> | null = null;
+// Set right before selectSuggestion() writes to `guess.value` so the watcher below
+// doesn't immediately clear the selection it just made.
+let programmaticChange = false;
 
 watch(guess, (value) => {
     activeIndex.value = -1;
+
+    if (programmaticChange)
+    {
+        programmaticChange = false;
+
+        return;
+    }
+
+    // Any manual edit invalidates a prior pick — the guess must come from a freshly
+    // selected suggestion, not leftover text.
+    selectedId.value = null;
 
     if (debounceHandle !== null)
     {
@@ -125,7 +140,9 @@ function moveActive(delta: number): void {
 }
 
 function selectSuggestion(item: TrackInfoDto): void {
+    programmaticChange = true;
     guess.value = `${item.trackName} - ${item.artistName}`;
+    selectedId.value = item.id;
     closeSuggestions();
 }
 
@@ -141,16 +158,15 @@ function onEnter(): void {
 }
 
 function submit(): void {
-    const text = guess.value.trim();
-
-    if (text === '')
+    if (selectedId.value === null)
     {
         return;
     }
 
     closeSuggestions();
-    emit('guess', text);
+    emit('guess', selectedId.value);
     guess.value = '';
+    selectedId.value = null;
 }
 </script>
 
