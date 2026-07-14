@@ -18,8 +18,8 @@ set('keep_releases', 5);
 set('git_tty', false);
 
 add('shared_files', ['config/local.neon']);
-add('shared_dirs', ['var/log', 'var/temp']);
-add('writable_dirs', ['var/log', 'var/temp']);
+add('shared_dirs', ['var/log', 'var/temp', 'var/audio']);
+add('writable_dirs', ['var/log', 'var/temp', 'var/audio']);
 set('writable_mode', 'chown');
 set('http_user', 'www-partysongbattlemarngdev');
 
